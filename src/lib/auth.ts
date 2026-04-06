@@ -1,3 +1,4 @@
+// src/lib/auth.ts
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -21,6 +22,9 @@ export const authOptions: NextAuthOptions = {
       }
     })
   ],
+  // 👇 เพิ่มบรรทัดนี้ลงไป เพื่อบังคับให้ NextAuth ใช้ Secret จาก .env
+  secret: process.env.NEXTAUTH_SECRET, 
+  
   callbacks: {
     async jwt({ token, user }) {
       if (user) { token.role = user.role; token.id = user.id; }

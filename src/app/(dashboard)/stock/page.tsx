@@ -1,101 +1,103 @@
+import Link from "next/link";
+import { Plus, Search, AlertCircle } from "lucide-react";
 import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
-import { Package, AlertTriangle, Clock, Activity } from "lucide-react";
-import Link from "next/link";
 
+// บังคับให้หน้านี้ดึงข้อมูลใหม่ทุกครั้งที่เปิด (ไม่แคช)
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function StockListPage() {
   await dbConnect();
-
-  // ดึงข้อมูลเพื่อมาทำสถิติ
-  const totalItems = await StockItem.countDocuments();
-  const outOfStock = await StockItem.countDocuments({ currentQuantity: 0 });
   
-  // หาสินค้าที่ใกล้หมดอายุในอีก 30 วัน
-  const thirtyDaysFromNow = new Date();
-  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-  
-  const expiringSoonCount = await StockItem.countDocuments({
-    expiryDate: { $lte: thirtyDaysFromNow },
-    currentQuantity: { $gt: 0 }
-  });
-
-  // หาสินค้าที่ต่ำกว่าจุดสั่งซื้อ (Min Stock Level)
-  const allStocks = await StockItem.find({ currentQuantity: { $gt: 0 } }).lean();
-  const lowStockCount = allStocks.filter(item => item.currentQuantity <= item.minStockLevel).length;
-
-  // การ์ดสรุปผล
-  const summaryCards = [
-    { title: "Total Stock Items", value: totalItems, icon: Package, color: "bg-blue-500" },
-    { title: "Low Stock Items", value: lowStockCount, icon: Activity, color: "bg-orange-500" },
-    { title: "Out of Stock", value: outOfStock, icon: AlertTriangle, color: "bg-red-500" },
-    { title: "Expiring Soon", value: expiringSoonCount, icon: Clock, color: "bg-purple-500" },
-  ];
+  // ดึงข้อมูลสินค้าทั้งหมด เรียงจากใหม่ไปเก่า
+  const stocks = await StockItem.find({}).sort({ createdAt: -1 }).lean();
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Welcome back! Here is what's happening with your inventory today.</p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        {summaryCards.map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <div key={idx} className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm flex items-center gap-4">
-              <div className={`${card.color} w-14 h-14 rounded-xl flex items-center justify-center text-white shadow-lg shadow-${card.color}/30`}>
-                <Icon className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{card.title}</p>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{card.value}</h3>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Quick Actions & Recent Info */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Actions Need Attention</h3>
-          </div>
-          <div className="space-y-4">
-            {lowStockCount > 0 && (
-              <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-800/30">
-                <div className="flex items-center gap-3 text-orange-700 dark:text-orange-400">
-                  <Activity className="w-5 h-5" />
-                  <span className="font-medium">{lowStockCount} items are running low</span>
-                </div>
-                <Link href="/purchase" className="text-sm font-semibold text-orange-700 hover:underline dark:text-orange-400">Restock List &rarr;</Link>
-              </div>
-            )}
-            
-            {expiringSoonCount > 0 && (
-              <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800/30">
-                <div className="flex items-center gap-3 text-purple-700 dark:text-purple-400">
-                  <Clock className="w-5 h-5" />
-                  <span className="font-medium">{expiringSoonCount} items expiring within 30 days</span>
-                </div>
-                <Link href="/stock" className="text-sm font-semibold text-purple-700 hover:underline dark:text-purple-400">View Items &rarr;</Link>
-              </div>
-            )}
-
-            {lowStockCount === 0 && expiringSoonCount === 0 && (
-              <p className="text-gray-500 py-4 text-center">Everything looks good! No urgent actions needed.</p>
-            )}
-          </div>
+      {/* Header & Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Stock Inventory</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage your items, view details, and check statuses.</p>
         </div>
+        <Link 
+          href="/stock/add" 
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          Add New Stock
+        </Link>
+      </div>
 
-        {/* Placeholder for Charts */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col justify-center items-center h-64">
-          <Activity className="w-12 h-12 text-gray-300 mb-2" />
-          <p className="text-gray-500 font-medium">Stock Usage Chart</p>
-          <p className="text-sm text-gray-400">(Recharts will be implemented here)</p>
+      {/* Search Bar (UI Mockup สำหรับตอนนี้) */}
+      <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center gap-3">
+        <Search className="w-5 h-5 text-gray-400" />
+        <input 
+          type="text" 
+          placeholder="Search by item name, lot number..." 
+          className="bg-transparent border-none outline-none w-full text-gray-700 dark:text-gray-200"
+        />
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+            <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300">
+              <tr>
+                <th className="px-6 py-4 font-medium">Item Name</th>
+                <th className="px-6 py-4 font-medium">Lot Number</th>
+                <th className="px-6 py-4 font-medium">Quantity</th>
+                <th className="px-6 py-4 font-medium">Expiry Date</th>
+                <th className="px-6 py-4 font-medium">Status</th>
+                <th className="px-6 py-4 font-medium text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+              {stocks.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    No stock items found. Click "Add New Stock" to get started.
+                  </td>
+                </tr>
+              ) : (
+                stocks.map((item: any) => {
+                  const isLowStock = item.currentQuantity <= item.minStockLevel;
+                  
+                  return (
+                    <tr key={item._id.toString()} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                        {item.itemName}
+                      </td>
+                      <td className="px-6 py-4">{item.lotNumber}</td>
+                      <td className="px-6 py-4">
+                        <span className={`font-semibold ${isLowStock ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-200'}`}>
+                          {item.currentQuantity}
+                        </span> {item.unit}
+                      </td>
+                      <td className="px-6 py-4">
+                        {new Date(item.expiryDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          item.currentQuantity === 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                          isLowStock ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                          'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        }`}>
+                          {item.currentQuantity === 0 ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link href={`/stock/${item._id}`} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
