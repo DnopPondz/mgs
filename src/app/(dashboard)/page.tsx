@@ -8,26 +8,34 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   await dbConnect();
 
-  // ดึงข้อมูลเพื่อมาทำสถิติ
-  const totalItems = await StockItem.countDocuments();
-  const outOfStock = await StockItem.countDocuments({ currentQuantity: 0 });
+  // 1. นับจำนวนสินค้า "ทุกชิ้น/ทุกล็อต"
+  const totalLots = await StockItem.countDocuments();
   
-  // หาสินค้าที่ใกล้หมดอายุในอีก 30 วัน
+  // 2. หาสินค้าที่ใกล้หมดอายุในอีก 30 วัน (อันนี้คิดแยกตาม Lot ถูกต้องแล้ว เพราะหมดอายุไม่พร้อมกัน)
   const thirtyDaysFromNow = new Date();
   thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-  
   const expiringSoonCount = await StockItem.countDocuments({
     expiryDate: { $lte: thirtyDaysFromNow },
     currentQuantity: { $gt: 0 }
   });
 
-  // หาสินค้าที่ต่ำกว่าจุดสั่งซื้อ (Min Stock Level)
-  const allStocks = await StockItem.find({ currentQuantity: { $gt: 0 } }).lean();
-  const lowStockCount = allStocks.filter(item => item.currentQuantity <= item.minStockLevel).length;
+  // 3. หาสินค้าใกล้หมด / ของหมด โดยใช้การ "รวมยอดตามชื่อสินค้า"
+  const inventoryStatus = await StockItem.aggregate([
+    {
+      $group: {
+        _id: "$itemName",
+        totalQty: { $sum: "$currentQuantity" },
+        minLevel: { $max: "$minStockLevel" }
+      }
+    }
+  ]);
 
-  // การ์ดสรุปผล
+  // คำนวณจากการรวมยอดแล้ว
+  const outOfStock = inventoryStatus.filter(item => item.totalQty === 0).length;
+  const lowStockCount = inventoryStatus.filter(item => item.totalQty > 0 && item.totalQty <= item.minLevel).length;
+
   const summaryCards = [
-    { title: "Total Stock Items", value: totalItems, icon: Package, color: "bg-blue-500" },
+    { title: "Total Stock Lots", value: totalLots, icon: Package, color: "bg-blue-500" },
     { title: "Low Stock Items", value: lowStockCount, icon: Activity, color: "bg-orange-500" },
     { title: "Out of Stock", value: outOfStock, icon: AlertTriangle, color: "bg-red-500" },
     { title: "Expiring Soon", value: expiringSoonCount, icon: Clock, color: "bg-purple-500" },
@@ -69,7 +77,7 @@ export default async function DashboardPage() {
               <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-800/30">
                 <div className="flex items-center gap-3 text-orange-700 dark:text-orange-400">
                   <Activity className="w-5 h-5" />
-                  <span className="font-medium">{lowStockCount} items are running low</span>
+                  <span className="font-medium">{lowStockCount} aggregated items are running low</span>
                 </div>
                 <Link href="/purchase" className="text-sm font-semibold text-orange-700 hover:underline dark:text-orange-400">Restock List &rarr;</Link>
               </div>
@@ -79,7 +87,7 @@ export default async function DashboardPage() {
               <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800/30">
                 <div className="flex items-center gap-3 text-purple-700 dark:text-purple-400">
                   <Clock className="w-5 h-5" />
-                  <span className="font-medium">{expiringSoonCount} items expiring within 30 days</span>
+                  <span className="font-medium">{expiringSoonCount} stock lots expiring within 30 days</span>
                 </div>
                 <Link href="/stock" className="text-sm font-semibold text-purple-700 hover:underline dark:text-purple-400">View Items &rarr;</Link>
               </div>
@@ -95,7 +103,7 @@ export default async function DashboardPage() {
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col justify-center items-center h-64">
           <Activity className="w-12 h-12 text-gray-300 mb-2" />
           <p className="text-gray-500 font-medium">Stock Usage Chart</p>
-          <p className="text-sm text-gray-400">(Recharts will be implemented here)</p>
+          <p className="text-sm text-gray-400">(Analytics will be displayed here)</p>
         </div>
       </div>
     </div>
