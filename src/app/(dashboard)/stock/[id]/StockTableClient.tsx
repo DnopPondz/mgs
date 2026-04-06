@@ -66,14 +66,14 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
                           {isLowStock ? 'Low Stock' : 'Healthy'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <Link
-                          href="/stock/add"
-                          className="inline-flex items-center gap-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm"
-                        >
-                          <PlusCircle className="w-4 h-4" /> Restock
-                        </Link>
-                      </td>
+                     <td className="px-6 py-4 text-right">
+  <Link 
+  href={`/stock/add?item=${encodeURIComponent(group.itemName)}`} 
+  className="inline-flex items-center gap-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm"
+>
+  <PlusCircle className="w-4 h-4" /> Restock
+</Link>
+</td>
                     </tr>
 
                     {/* 🟡 แถวย่อย (กระจายเป็นแถวปกติ ไม่สร้างตารางซ้อน) */}
