@@ -41,3 +41,24 @@ export async function createStockAction(formData: any) {
     return { success: false, message: error.message || "Failed to add stock" };
   }
 }
+
+import Category from "@/models/Category";
+import Location from "@/models/Location";
+
+// เพิ่มฟังก์ชันนี้ต่อท้าย
+export async function getDropdownData() {
+  try {
+    await dbConnect();
+    const categories = await Category.find({}).lean();
+    const locations = await Location.find({}).lean();
+    
+    // แปลง ObjectId เป็น String เพื่อไม่ให้ Next.js Error ตอนส่งข้ามมายัง Client
+    return {
+      success: true,
+      categories: JSON.parse(JSON.stringify(categories)),
+      locations: JSON.parse(JSON.stringify(locations))
+    };
+  } catch (error) {
+    return { success: false, categories: [], locations: [] };
+  }
+}

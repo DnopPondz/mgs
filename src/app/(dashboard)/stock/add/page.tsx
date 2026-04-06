@@ -1,27 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { createStockAction } from "@/app/actions/stock";
-import { QRCodeCanvas } from "qrcode.react"; // ไลบรารีสำหรับวาด QR Code
+import { createStockAction, getDropdownData } from "@/app/actions/stock";
+import { QRCodeCanvas } from "qrcode.react";
 import { PackagePlus, Save, Printer } from "lucide-react";
 
 export default function AddStockPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedQr, setGeneratedQr] = useState<string | null>(null);
   
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  // State สำหรับเก็บข้อมูล Dropdown
+  const [categories, setCategories] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm();
+
+  // ดึงข้อมูล Dropdown ตอนเปิดหน้าเว็บ
+  useEffect(() => {
+    async function fetchData() {
+      const data = await getDropdownData();
+      if (data.success) {
+        setCategories(data.categories);
+        setLocations(data.locations);
+      }
+    }
+    fetchData();
+  }, []);
+
+  // เมื่อเปลี่ยน Category ให้ดึง Default Shelf Life มาใส่ฟอร์มอัตโนมัติ (UX ที่ดี)
+  const selectedCategoryId = watch("categoryId");
+  useEffect(() => {
+    if (selectedCategoryId) {
+      const selectedCat = categories.find(c => c._id === selectedCategoryId);
+      if (selectedCat && selectedCat.defaultShelfLifeDays) {
+        setValue("shelfLifeDays", selectedCat.defaultShelfLifeDays);
+      }
+    }
+  }, [selectedCategoryId, categories, setValue]);
 
   const onSubmit = async (data: any) => {
     setIsLoading(true);
-    
-    // สมมติค่า ObjectId ของ Category/Location ไปก่อน (จริงๆ ต้อง Fetch มาทำ Dropdown)
-    // ตรงนี้ผม hardcode ไว้ให้ระบบรันผ่านก่อนนะ คุณต้องแก้ให้เลือกจาก Dropdown ทีหลัง
     const payload = {
       ...data,
-      categoryId: "650000000000000000000000", 
-      locationId: "650000000000000000000001",
       initialQuantity: Number(data.initialQuantity),
       shelfLifeDays: Number(data.shelfLifeDays),
       minStockLevel: Number(data.minStockLevel),
@@ -31,8 +53,8 @@ export default function AddStockPage() {
     
     if (res.success) {
       toast.success(res.message);
-      setGeneratedQr(res.qrCodeValue); // เซ็ตค่า QR Code เพื่อแสดงบนหน้าจอ
-      reset(); // ล้างฟอร์ม
+      setGeneratedQr(res.qrCodeValue);
+      reset();
     } else {
       toast.error(res.message);
     }
@@ -41,20 +63,41 @@ export default function AddStockPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+      <h1 className="text-2xl font-bold flex items-center gap-2">
         <PackagePlus className="w-6 h-6 text-indigo-600" />
         Add New Stock
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* ฟอร์มกรอกข้อมูล (ใช้พื้นที่ 2 ส่วน) */}
         <div className="md:col-span-2 bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Item Name</label>
-              <input {...register("itemName", { required: true })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700" />
+              <input {...register("itemName", { required: true })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
             
+            {/* Dropdown สำหรับ Category และ Location */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <select {...register("categoryId", { required: true })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="">Select Category...</option>
+                  {categories.map(cat => (
+                    <option key={cat._id} value={cat._id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Storage Location</label>
+                <select {...register("locationId", { required: true })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="">Select Location...</option>
+                  {locations.map(loc => (
+                    <option key={loc._id} value={loc._id}>{loc.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Lot Number</label>
@@ -69,7 +112,7 @@ export default function AddStockPage() {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Initial Qty</label>
-                <input type="number" {...register("initialQuantity", { required: true })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700" />
+                <input type="number" {...register("initialQuantity", { required: true, min: 1 })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Min Stock Level</label>
@@ -93,19 +136,15 @@ export default function AddStockPage() {
           </form>
         </div>
 
-        {/* ส่วนแสดง QR Code เมื่อเพิ่มเสร็จ (ใช้พื้นที่ 1 ส่วน) */}
+        {/* แสดง QR Code */}
         <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center text-center h-fit sticky top-24">
           <h3 className="font-semibold text-lg mb-4">Generated QR Code</h3>
           {generatedQr ? (
             <div className="space-y-4 flex flex-col items-center">
               <div className="p-4 bg-white border-2 border-dashed border-gray-200 rounded-xl">
-                {/* นี่คือพระเอกของเรา ตัววาดรูป QR Code */}
                 <QRCodeCanvas value={generatedQr} size={150} level={"H"} />
               </div>
               <p className="text-xs text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{generatedQr}</p>
-              <button className="text-sm text-indigo-600 flex items-center gap-1 hover:underline">
-                <Printer className="w-4 h-4" /> Print Label
-              </button>
             </div>
           ) : (
             <p className="text-sm text-gray-400">Add an item to generate its unique QR Code.</p>
