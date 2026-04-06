@@ -1,11 +1,20 @@
 "use client";
+import { useState, useEffect } from "react";
 import { Menu, Moon, Sun, User as UserIcon } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 
 export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
   const { data: session } = useSession();
-  const { theme, setTheme } = useTheme();
+  
+  // ใช้ resolvedTheme แทน theme เปล่าๆ เพื่อเช็คสถานะ System ปัจจุบัน
+  const { theme, setTheme, resolvedTheme } = useTheme(); 
+  const [mounted, setMounted] = useState(false);
+
+  // ป้องกัน Hydration Mismatch รอให้ฝั่ง Client โหลดเสร็จก่อนค่อยโชว์ไอคอน
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 lg:px-6 z-40 sticky top-0">
@@ -20,11 +29,16 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* ปุ่มเปลี่ยน Theme ที่อัปเกรดแล้ว */}
         <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           className="p-2 text-gray-600 hover:bg-gray-100 rounded-full dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
         >
-          {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          {mounted ? (
+            resolvedTheme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />
+          ) : (
+            <div className="w-5 h-5 opacity-0"></div> /* Placeholder กันปุ่มกระตุก */
+          )}
         </button>
 
         {session?.user ? (

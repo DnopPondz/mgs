@@ -1,3 +1,6 @@
 @import "tailwindcss";
 
+/* เพิ่มบรรทัดนี้เพื่อเชื่อมระบบ Dark Mode เข้ากับ next-themes */
+@custom-variant dark (&:where(.dark, .dark *));
 
+/* ... โค้ดอื่นๆ ในไฟล์ globals.css ของคุณ (ถ้ามี) ... */

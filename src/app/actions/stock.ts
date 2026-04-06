@@ -52,13 +52,27 @@ export async function getDropdownData() {
     const categories = await Category.find({}).lean();
     const locations = await Location.find({}).lean();
     
-    // แปลง ObjectId เป็น String เพื่อไม่ให้ Next.js Error ตอนส่งข้ามมายัง Client
+    // ดึงข้อมูลสินค้าที่เคยสร้างไว้แล้ว เพื่อเอามาทำ Auto-Fill (จับกลุ่มตามชื่อ)
+    const itemTemplates = await StockItem.aggregate([
+      { $sort: { createdAt: -1 } },
+      { $group: {
+          _id: "$itemName",
+          categoryId: { $first: "$categoryId" },
+          locationId: { $first: "$locationId" },
+          unit: { $first: "$unit" },
+          minStockLevel: { $first: "$minStockLevel" },
+          shelfLifeDays: { $first: "$shelfLifeDays" }
+        }
+      }
+    ]);
+    
     return {
       success: true,
       categories: JSON.parse(JSON.stringify(categories)),
-      locations: JSON.parse(JSON.stringify(locations))
+      locations: JSON.parse(JSON.stringify(locations)),
+      itemTemplates: JSON.parse(JSON.stringify(itemTemplates)) // ส่งเทมเพลตกลับไปด้วย
     };
   } catch (error) {
-    return { success: false, categories: [], locations: [] };
+    return { success: false, categories: [], locations: [], itemTemplates: [] };
   }
 }
