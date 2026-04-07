@@ -11,18 +11,24 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
       credentials: { email: { type: "text" }, password: { type: "password" } },
       async authorize(credentials) {
+        // เพิ่ม Guard Clause ตรวจสอบให้แน่ใจว่ามีการส่งข้อมูลมา
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Email and password are required");
+        }
+
         await dbConnect();
-        const user = await User.findOne({ email: credentials?.email });
+        const user = await User.findOne({ email: credentials.email });
         if (!user || !user.isActive) throw new Error("Invalid credentials or inactive account");
         
-        const isMatch = await bcrypt.compare(credentials!.password, user.password);
+        // ถอด ! (Non-null assertion) ออกได้เลย เพราะตรวจสอบแล้วด้านบน
+        const isMatch = await bcrypt.compare(credentials.password, user.password);
         if (!isMatch) throw new Error("Invalid credentials");
         
         return { id: user._id.toString(), name: user.name, email: user.email, role: user.role };
       }
     })
   ],
-  // 👇 เพิ่มบรรทัดนี้ลงไป เพื่อบังคับให้ NextAuth ใช้ Secret จาก .env
+  // 👇 ใช้ Secret จาก .env 
   secret: process.env.NEXTAUTH_SECRET, 
   
   callbacks: {

@@ -8,11 +8,33 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { logAudit } from "@/app/actions/system"; 
 import mongoose from "mongoose";
+import { addDays } from "date-fns";
+import { z } from "zod";
 
-export async function createStockAction(payload: any) {
+// สร้าง Schema พื้นฐานสำหรับเช็คข้อมูล payload ป้องกัน Runtime Error
+const stockPayloadSchema = z.object({
+  categoryId: z.string(),
+  locationId: z.string(),
+  itemName: z.string(),
+  lotNumber: z.string(),
+  manufactureDate: z.string().or(z.date()),
+  shelfLifeDays: z.coerce.number(),
+  initialQuantity: z.coerce.number(),
+  unitCost: z.coerce.number().optional().default(0),
+  imageUrl: z.string().optional().default(""),
+}).passthrough(); // .passthrough() ยอมให้มีฟิลด์อื่นๆ หลุดมาได้ (เช่น unit, minStockLevel)
+
+export async function createStockAction(rawPayload: any) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return { success: false, message: "Unauthorized!" };
+
+    // ตรวจสอบความถูกต้องของข้อมูลผ่าน Zod
+    const parsed = stockPayloadSchema.safeParse(rawPayload);
+    if (!parsed.success) {
+      return { success: false, message: "ข้อมูลที่ส่งมาไม่ถูกต้อง (Invalid Data Format)" };
+    }
+    const payload = parsed.data;
 
     await dbConnect();
 
@@ -24,17 +46,17 @@ export async function createStockAction(payload: any) {
 
     const qrCodeValue = `${payload.itemName.toUpperCase().replace(/\s+/g, '-')}-${payload.lotNumber}`;
 
-    // จัดการเรื่องวันที่ (ป้องกันปัญหา Timezone)
+    // จัดการเรื่องวันที่ โดยใช้ date-fns เพื่อความแม่นยำและป้องกันปัญหา Timezone
     const mfgDate = new Date(payload.manufactureDate);
-    const expDate = new Date(mfgDate.getTime() + (Number(payload.shelfLifeDays) * 24 * 60 * 60 * 1000));
+    const expDate = addDays(mfgDate, payload.shelfLifeDays);
 
     const newStock = await StockItem.create({
-      ...payload,
+      ...payload, // นำข้อมูลทั้งหมดใส่เข้าไป
       currentQuantity: payload.initialQuantity,
       expiryDate: expDate,
       qrCodeValue,
-      imageUrl: payload.imageUrl || "",
-      unitCost: Number(payload.unitCost) || 0,
+      imageUrl: payload.imageUrl,
+      unitCost: payload.unitCost,
     });
 
     await logAudit("ADD_STOCK", `เพิ่มสต๊อก: ${payload.itemName} (Lot: ${payload.lotNumber})`);
@@ -45,6 +67,7 @@ export async function createStockAction(payload: any) {
     if (error.code === 11000) {
       return { success: false, message: "QR Code หรือ Lot นี้มีในระบบแล้ว" };
     }
+    console.error("Create Stock Error:", error);
     return { success: false, message: error.message };
   }
 }
@@ -68,13 +91,18 @@ export async function getDropdownData() {
         }
       }
     ]);
-    return { success: true, categories: JSON.parse(JSON.stringify(categories)), locations: JSON.parse(JSON.stringify(locations)), itemTemplates: JSON.parse(JSON.stringify(itemTemplates)) };
+    return { 
+      success: true, 
+      categories: JSON.parse(JSON.stringify(categories)), 
+      locations: JSON.parse(JSON.stringify(locations)), 
+      itemTemplates: JSON.parse(JSON.stringify(itemTemplates)) 
+    };
   } catch (error) {
+    console.error("Failed to fetch dropdown data:", error); // ดักจับ Log เพื่อให้เช็คปัญหาได้ง่ายขึ้น
     return { success: false, categories: [], locations: [], itemTemplates: [] };
   }
 }
 
-// เพิ่มฟังก์ชันหรือแก้ไขฟังก์ชันดึงข้อมูล Dashboard
 export async function getDashboardStats() {
   try {
     await dbConnect();
@@ -98,6 +126,7 @@ export async function getDashboardStats() {
 
     return { success: true, data: JSON.parse(JSON.stringify(stats)) };
   } catch (error) {
+    console.error("Failed to fetch dashboard stats:", error); // ดักจับ Log
     return { success: false, data: [] };
   }
 }
