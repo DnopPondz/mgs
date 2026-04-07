@@ -2,16 +2,15 @@ import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
 import { Package, AlertTriangle, Clock, Activity } from "lucide-react";
 import Link from "next/link";
+import DashboardChart from "./DashboardChart";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   await dbConnect();
 
-  // 1. นับจำนวนสินค้า "ทุกชิ้น/ทุกล็อต"
   const totalLots = await StockItem.countDocuments();
   
-  // 2. หาสินค้าที่ใกล้หมดอายุในอีก 30 วัน (อันนี้คิดแยกตาม Lot ถูกต้องแล้ว เพราะหมดอายุไม่พร้อมกัน)
   const thirtyDaysFromNow = new Date();
   thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
   const expiringSoonCount = await StockItem.countDocuments({
@@ -19,7 +18,6 @@ export default async function DashboardPage() {
     currentQuantity: { $gt: 0 }
   });
 
-  // 3. หาสินค้าใกล้หมด / ของหมด โดยใช้การ "รวมยอดตามชื่อสินค้า"
   const inventoryStatus = await StockItem.aggregate([
     {
       $group: {
@@ -30,9 +28,13 @@ export default async function DashboardPage() {
     }
   ]);
 
-  // คำนวณจากการรวมยอดแล้ว
   const outOfStock = inventoryStatus.filter(item => item.totalQty === 0).length;
   const lowStockCount = inventoryStatus.filter(item => item.totalQty > 0 && item.totalQty <= item.minLevel).length;
+
+  const chartData = inventoryStatus
+    .map(item => ({ name: item._id, quantity: item.totalQty }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 7);
 
   const summaryCards = [
     { title: "Total Stock Lots", value: totalLots, icon: Package, color: "bg-blue-500" },
@@ -48,7 +50,6 @@ export default async function DashboardPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400">Welcome back! Here is what's happening with your inventory today.</p>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {summaryCards.map((card, idx) => {
           const Icon = card.icon;
@@ -66,12 +67,9 @@ export default async function DashboardPage() {
         })}
       </div>
 
-      {/* Quick Actions & Recent Info */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Actions Need Attention</h3>
-          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Actions Need Attention</h3>
           <div className="space-y-4">
             {lowStockCount > 0 && (
               <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-800/30">
@@ -99,11 +97,11 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Placeholder for Charts */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col justify-center items-center h-64">
-          <Activity className="w-12 h-12 text-gray-300 mb-2" />
-          <p className="text-gray-500 font-medium">Stock Usage Chart</p>
-          <p className="text-sm text-gray-400">(Analytics will be displayed here)</p>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col h-80">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Top Stock Levels</h3>
+          <div className="flex-1 w-full">
+            <DashboardChart data={chartData} />
+          </div>
         </div>
       </div>
     </div>

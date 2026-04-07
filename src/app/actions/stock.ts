@@ -2,57 +2,47 @@
 
 import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
-import { addDays } from "date-fns";
-import { revalidatePath } from "next/cache";
+import Category from "@/models/Category";
+import Location from "@/models/Location";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
-export async function createStockAction(formData: any) {
+export async function createStockAction(payload: any) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) return { success: false, message: "Unauthorized! กรุณาล็อกอิน" };
+
     await dbConnect();
+    
+    const qrCodeValue = `${payload.itemName.toUpperCase().replace(/\s+/g, '-')}-${payload.lotNumber}`;
 
-    // 1. คำนวณวันหมดอายุอัตโนมัติ (วันผลิต + อายุการเก็บรักษา)
-    const manufactureDate = new Date(formData.manufactureDate);
-    const expiryDate = addDays(manufactureDate, Number(formData.shelfLifeDays));
-
-    // 2. สร้างรหัส QR Code อัตโนมัติ (ใช้ TimeStamp + เลขสุ่มเพื่อไม่ให้ซ้ำ)
-    const uniqueQrValue = `QR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-    // 3. บันทึกลงฐานข้อมูล
-    const newStock = new StockItem({
-      ...formData,
-      currentQuantity: formData.initialQuantity, // ตอนแรกรับเข้ามา current = initial
-      expiryDate: expiryDate,
-      qrCodeValue: uniqueQrValue,
+    const newStock = await StockItem.create({
+      itemName: payload.itemName,
+      categoryId: payload.categoryId,
+      locationId: payload.locationId,
+      lotNumber: payload.lotNumber,
+      initialQuantity: payload.initialQuantity,
+      currentQuantity: payload.initialQuantity,
+      unit: payload.unit,
+      minStockLevel: payload.minStockLevel,
+      manufactureDate: new Date(payload.manufactureDate),
+      shelfLifeDays: payload.shelfLifeDays,
+      expiryDate: new Date(new Date(payload.manufactureDate).getTime() + payload.shelfLifeDays * 24 * 60 * 60 * 1000),
+      qrCodeValue,
     });
 
-    await newStock.save();
-    
-    // รีเฟรชหน้าให้ข้อมูลอัปเดต
-    revalidatePath("/stock");
-    
-    // คืนค่ากลับไปพร้อมข้อมูลเผื่อเอาไปโชว์ QR Code ทันที
-    return { 
-      success: true, 
-      message: "Stock added successfully!",
-      qrCodeValue: uniqueQrValue,
-      stockId: newStock._id.toString()
-    };
+    return { success: true, message: "Stock added successfully!", qrCodeValue: newStock.qrCodeValue };
   } catch (error: any) {
-    console.error("Error creating stock:", error);
-    return { success: false, message: error.message || "Failed to add stock" };
+    return { success: false, message: error.message };
   }
 }
 
-import Category from "@/models/Category";
-import Location from "@/models/Location";
-
-// เพิ่มฟังก์ชันนี้ต่อท้าย
 export async function getDropdownData() {
   try {
     await dbConnect();
     const categories = await Category.find({}).lean();
     const locations = await Location.find({}).lean();
     
-    // ดึงข้อมูลสินค้าที่เคยสร้างไว้แล้ว เพื่อเอามาทำ Auto-Fill (จับกลุ่มตามชื่อ)
     const itemTemplates = await StockItem.aggregate([
       { $sort: { createdAt: -1 } },
       { $group: {
@@ -70,7 +60,7 @@ export async function getDropdownData() {
       success: true,
       categories: JSON.parse(JSON.stringify(categories)),
       locations: JSON.parse(JSON.stringify(locations)),
-      itemTemplates: JSON.parse(JSON.stringify(itemTemplates)) // ส่งเทมเพลตกลับไปด้วย
+      itemTemplates: JSON.parse(JSON.stringify(itemTemplates))
     };
   } catch (error) {
     return { success: false, categories: [], locations: [], itemTemplates: [] };

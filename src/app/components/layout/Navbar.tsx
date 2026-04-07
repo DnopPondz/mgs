@@ -6,12 +6,9 @@ import { useTheme } from "next-themes";
 
 export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
   const { data: session } = useSession();
-  
-  // ใช้ resolvedTheme แทน theme เปล่าๆ เพื่อเช็คสถานะ System ปัจจุบัน
   const { theme, setTheme, resolvedTheme } = useTheme(); 
   const [mounted, setMounted] = useState(false);
 
-  // ป้องกัน Hydration Mismatch รอให้ฝั่ง Client โหลดเสร็จก่อนค่อยโชว์ไอคอน
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -29,7 +26,6 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* ปุ่มเปลี่ยน Theme ที่อัปเกรดแล้ว */}
         <button
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           className="p-2 text-gray-600 hover:bg-gray-100 rounded-full dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
@@ -37,7 +33,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
           {mounted ? (
             resolvedTheme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />
           ) : (
-            <div className="w-5 h-5 opacity-0"></div> /* Placeholder กันปุ่มกระตุก */
+            <div className="w-5 h-5 opacity-0"></div>
           )}
         </button>
 

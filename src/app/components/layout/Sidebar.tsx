@@ -1,43 +1,50 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+
+// 👇 เพิ่มบรรทัดนี้เข้าไปด้านบนสุดใต้พวก import อื่นๆ ครับ
+import clsx from "clsx"; 
+
 import { 
   LayoutDashboard, 
   Package, 
-  MapPin, 
   QrCode, 
-  ClipboardList, 
-  Users, 
-  Settings,
-  Tag,        // <-- ต้อง Import ตัวนี้สำหรับ Categories
-  History     // <-- ต้อง Import ตัวนี้สำหรับ Usage History
+  History, 
+  Tag, 
+  MapPin, 
+  X,
+  ClipboardList,
+  Users
 } from "lucide-react";
-import { useSession } from "next-auth/react";
-import clsx from "clsx";
 
-export default function Sidebar({ isOpen }: { isOpen: boolean }) {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  
+  // เช็คว่าเป็น Admin หรือไม่
   const isAdmin = session?.user?.role === "Admin";
 
-  // เมนูทั้งหมดที่เราสร้างไว้
+  // กำหนดสิทธิ์การมองเห็นเมนู 
+  // show: true คือเห็นทุกคน
+  // show: isAdmin คือเห็นเฉพาะคนที่เป็น Admin
   const links = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Stock Management", href: "/stock", icon: Package },
-    { name: "Scan QR", href: "/scan", icon: QrCode },
-    { name: "Usage History", href: "/usage", icon: History },
-    { name: "Categories", href: "/categories", icon: Tag },
-    { name: "Locations", href: "/locations", icon: MapPin },
-    { name: "Purchase List", href: "/purchase", icon: ClipboardList },
-  ];
-
-  // ถ้าเป็น Admin ถึงจะเห็นเมนูจัดการผู้ใช้
-  if (isAdmin) {
-    links.push({ name: "User Management", href: "/users", icon: Users });
-  }
+    { name: "Dashboard", href: "/", icon: LayoutDashboard, show: true },
+    { name: "Stock Management", href: "/stock", icon: Package, show: true },
+    { name: "Scan QR", href: "/scan", icon: QrCode, show: true },
+    { name: "Usage History", href: "/usage", icon: History, show: true },
+    { name: "Purchase List", href: "/purchase", icon: ClipboardList, show: true },
+    // 3 เมนูด้านล่างนี้ จะถูกซ่อนถ้าล็อกอินด้วย Staff
+    { name: "Categories", href: "/categories", icon: Tag, show: isAdmin },
+    { name: "Locations", href: "/locations", icon: MapPin, show: isAdmin },
+    { name: "Users", href: "/users", icon: Users, show: isAdmin },
+  ].filter(link => link.show); // กรองเอาเฉพาะเมนูที่อนุญาตให้แสดง
   
-  links.push({ name: "Settings", href: "/settings", icon: Settings });
-
   return (
     <aside className={clsx(
       "fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 flex flex-col",

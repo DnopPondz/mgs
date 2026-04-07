@@ -18,13 +18,11 @@ function AddStockForm() {
   const [categories, setCategories] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
   const [itemTemplates, setItemTemplates] = useState<any[]>([]);
-  
-  // State สำหรับควบคุม Dropdown Quick Fill
   const [selectedTemplate, setSelectedTemplate] = useState("");
   
   const { register, handleSubmit, reset, setValue } = useForm();
 
-  // 🎨 คลาสมาตรฐานสำหรับ Input ทุกช่อง (แก้ปัญหา Dark Mode ขาวสว่างวาบ)
+  // คลาสมาตรฐานสำหรับ Input ไม่ให้แสบตาในโหมดมืด
   const inputClass = "w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-colors";
 
   useEffect(() => {
@@ -35,20 +33,16 @@ function AddStockForm() {
         setLocations(data.locations);
         setItemTemplates(data.itemTemplates);
 
-        // 🌟 ถ้าระบบเจอว่ามาจากปุ่ม Restock (มีชื่อสินค้าใน URL)
         if (initialItem) {
           const template = data.itemTemplates.find((t: any) => t._id === initialItem);
           if (template) {
-            // สั่งเลือก Dropdown อัตโนมัติ
             setSelectedTemplate(template._id);
-            // เติมข้อมูลลงช่องอัตโนมัติ
             setValue("itemName", template._id);
             setValue("categoryId", template.categoryId);
             setValue("locationId", template.locationId);
             setValue("unit", template.unit);
             setValue("minStockLevel", template.minStockLevel);
             setValue("shelfLifeDays", template.shelfLifeDays);
-            
             toast.success(`Ready to restock: ${template._id}`);
           }
         }
@@ -93,7 +87,7 @@ function AddStockForm() {
       toast.success(res.message);
       setGeneratedQr(res.qrCodeValue);
       reset();
-      setSelectedTemplate(""); // ล้างค่า Dropdown
+      setSelectedTemplate(""); 
     } else {
       toast.error(res.message);
     }
@@ -104,17 +98,11 @@ function AddStockForm() {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="md:col-span-2 space-y-6">
         
-        {/* กล่อง Quick Fill ด้านบนสุด */}
         <div className="bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
           <label className="block text-sm font-semibold text-indigo-900 dark:text-indigo-300 mb-2 flex items-center gap-2">
-            <CopyCheck className="w-4 h-4" />
-            Quick Fill (Select Existing Item)
+            <CopyCheck className="w-4 h-4" /> Quick Fill (Select Existing Item)
           </label>
-          <select 
-            value={selectedTemplate}
-            onChange={handleSelectTemplate} 
-            className={inputClass}
-          >
+          <select value={selectedTemplate} onChange={handleSelectTemplate} className={inputClass}>
             <option value="">-- Or type manually below for a new item --</option>
             {itemTemplates.map(template => (
               <option key={template._id} value={template._id}>
@@ -191,7 +179,6 @@ function AddStockForm() {
         </div>
       </div>
 
-      {/* กล่องแสดง QR Code */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center text-center h-fit sticky top-24">
         <h3 className="font-semibold text-lg mb-4 text-gray-900 dark:text-white">Generated QR Code</h3>
         {generatedQr ? (
@@ -209,13 +196,11 @@ function AddStockForm() {
   );
 }
 
-// หุ้มด้วย Suspense เพื่อป้องกัน Error ตอนใช้งาน useSearchParams
 export default function AddStockPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-        <PackagePlus className="w-6 h-6 text-indigo-600" />
-        Add / Restock Item
+        <PackagePlus className="w-6 h-6 text-indigo-600" /> Add / Restock Item
       </h1>
       <Suspense fallback={<div className="p-12 text-center text-gray-500 animate-pulse">Loading setup...</div>}>
         <AddStockForm />

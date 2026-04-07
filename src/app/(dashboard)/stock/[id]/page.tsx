@@ -4,8 +4,7 @@ import Category from "@/models/Category";
 import Location from "@/models/Location";
 import { Package, Calendar, MapPin, AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-// ✅ 1. Import ฟอร์มที่เราเพิ่งสร้างเข้ามา
-import UseStockForm from "./UseStockForm"; 
+import UseStockForm from "./UseStockForm";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +38,6 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
       </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* ข้อมูลรายละเอียด */}
         <div className="md:col-span-2 bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm">
           <div className="flex justify-between items-start mb-6">
             <div>
@@ -91,16 +89,9 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
             </div>
           </div>
 
-          {/* ✅ 2. เพิ่ม Component ฟอร์มเบิกสินค้าที่นี่เลยครับ */}
-          <UseStockForm 
-            stockId={stock._id.toString()} 
-            currentQuantity={stock.currentQuantity} 
-            unit={stock.unit} 
-          />
-
+          <UseStockForm stockId={stock._id.toString()} currentQuantity={stock.currentQuantity} unit={stock.unit} />
         </div>
 
-        {/* ส่วนแสดง QR Code สำหรับนำไปปริ้นท์ */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col items-center h-fit text-center">
           <h3 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-200">Item QR Code</h3>
           <div className="bg-white p-4 border-2 border-dashed border-gray-200 rounded-xl mb-4 inline-block">
@@ -113,9 +104,6 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
           <p className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded text-gray-600 dark:text-gray-300">
             {stock.qrCodeValue}
           </p>
-          <button className="mt-6 w-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 font-medium py-2 rounded-lg transition-colors">
-            Print QR Label
-          </button>
         </div>
       </div>
     </div>

@@ -8,10 +8,7 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
   const toggleRow = (itemName: string) => {
-    setExpandedRows(prev => ({
-      ...prev,
-      [itemName]: !prev[itemName]
-    }));
+    setExpandedRows(prev => ({ ...prev, [itemName]: !prev[itemName] }));
   };
 
   return (
@@ -20,7 +17,7 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800/50">
             <tr>
-              <th className="px-6 py-4 font-medium w-14 text-center text-gray-700 dark:text-gray-300"></th>
+              <th className="px-6 py-4 w-14 text-center"></th>
               <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300">Item Name</th>
               <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300">Category</th>
               <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-center">Total Qty</th>
@@ -30,9 +27,7 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
             {groupedStocks.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">No stock items found.</td>
-              </tr>
+              <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500">No stock items found.</td></tr>
             ) : (
               groupedStocks.map((group: any) => {
                 const isExpanded = expandedRows[group.itemName];
@@ -40,7 +35,6 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
 
                 return (
                   <React.Fragment key={group.itemName}>
-                    {/* 🟢 แถวหลัก (โชว์รวมยอด) */}
                     <tr className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isExpanded ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
                       <td className="px-6 py-4 text-center cursor-pointer" onClick={() => toggleRow(group.itemName)}>
                         <button className="p-1 rounded-md text-gray-400 hover:bg-gray-200 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400 transition-colors">
@@ -51,33 +45,23 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
                         <p className="font-bold text-gray-900 dark:text-white text-base">{group.itemName}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{group.lots.length} active lots</p>
                       </td>
-                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
-                        {group.category}
-                      </td>
+                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{group.category}</td>
                       <td className="px-6 py-4 text-center cursor-pointer" onClick={() => toggleRow(group.itemName)}>
-                        <span className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">
-                          {group.totalQuantity}
-                        </span> <span className="text-xs text-gray-500">{group.unit}</span>
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">{group.totalQuantity}</span> 
+                        <span className="text-xs text-gray-500 ml-1">{group.unit}</span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          isLowStock ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        }`}>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isLowStock ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
                           {isLowStock ? 'Low Stock' : 'Healthy'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {/* 🎯 แก้ตรงนี้! ส่งชื่อสินค้าแนบไปใน URL ด้วย (ก่อนหน้านี้ผมเผลอลบมันทิ้งไปครับ) */}
-                        <Link
-                          href={`/stock/add?item=${encodeURIComponent(group.itemName)}`}
-                          className="inline-flex items-center gap-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm"
-                        >
+                        <Link href={`/stock/add?item=${encodeURIComponent(group.itemName)}`} className="inline-flex items-center gap-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm">
                           <PlusCircle className="w-4 h-4" /> Restock
                         </Link>
                       </td>
                     </tr>
 
-                    {/* 🟡 แถวย่อย (กระจายเป็นแถวปกติ ไม่สร้างตารางซ้อน) */}
                     {isExpanded && group.lots.map((lot: any) => {
                       const isExpiringSoon = (new Date(lot.expiryDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24) <= 30;
 
@@ -106,16 +90,11 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
                           </td>
                           <td className="px-6 py-3 text-center">
                             {isExpiringSoon && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                                Expiring
-                              </span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">Expiring</span>
                             )}
                           </td>
                           <td className="px-6 py-3 text-right">
-                            <Link
-                              href={`/stock/${lot._id}`}
-                              className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-xs font-semibold transition-colors"
-                            >
+                            <Link href={`/stock/${lot._id}`} className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-xs font-semibold transition-colors">
                               Use / View <ArrowRight className="w-3 h-3" />
                             </Link>
                           </td>
