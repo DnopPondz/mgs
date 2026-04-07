@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
+import Category from "@/models/Category"; // ต้อง import เพื่อให้ Mongoose รู้จัก Model ตอน Lookup
 import { ClipboardList, AlertCircle, ShoppingCart } from "lucide-react";
 import ActionButtons from "./ActionButtons";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function PurchaseListPage() {
   await dbConnect();
 
-  const aggregatedItems = await StockItem.aggregate([
+  const aggregatedItemsRaw = await StockItem.aggregate([
     {
       $group: {
         _id: "$itemName",
@@ -31,6 +32,9 @@ export default async function PurchaseListPage() {
     { $sort: { totalQuantity: 1 } }
   ]);
 
+  // แก้ไข Error: แปลงข้อมูลจาก Mongoose Aggregate (ที่มี ObjectId/Buffers) ให้เป็น Plain Object
+  const aggregatedItems = JSON.parse(JSON.stringify(aggregatedItemsRaw));
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 print:m-0 print:space-y-0 print:max-w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
@@ -42,7 +46,7 @@ export default async function PurchaseListPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Aggregated items that have fallen below their minimum stock level.</p>
         </div>
         
-        {/* เรียกใช้ Client Component เพื่อหลีกเลี่ยง Error */}
+        {/* ส่งข้อมูลที่ผ่านการ Serialize แล้วไปที่ ActionButtons */}
         <ActionButtons data={aggregatedItems} />
       </div>
 
@@ -71,10 +75,8 @@ export default async function PurchaseListPage() {
         </div>
       </div>
 
-      {/* ซ่อนเฉพาะกรอบตารางตอนพิมพ์ ให้แสดงแต่เนื้อหาตาราง */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden print:border-none print:shadow-none">
         <div className="overflow-x-auto">
-          {/* เพิ่มหัวข้อตอนพิมพ์ */}
           <h2 className="hidden print:block text-xl font-bold mb-4 text-black">Purchase List Report</h2>
           <table className="w-full text-left text-sm print:text-black print:border-collapse">
             <thead className="bg-gray-50 dark:bg-gray-800/50 print:bg-transparent">

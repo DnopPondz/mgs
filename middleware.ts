@@ -1,6 +1,6 @@
 export { default } from "next-auth/middleware";
 
 export const config = {
-  // เปลี่ยนจาก ?!api เป็น ?!api/auth เพื่อล็อคโฟลเดอร์ API อื่นๆ ทั้งหมด (เช่น /api/seed จะโดนล็อคด้วย)
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
+  // เพิ่ม api/stock/scan เข้าไปในรายการที่ไม่ต้องตรวจ Token
+  matcher: ["/((?!api/auth|api/stock/scan|_next/static|_next/image|favicon.ico).*)"], 
 };
