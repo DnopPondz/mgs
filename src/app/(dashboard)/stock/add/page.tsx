@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { createStockAction, getDropdownData } from "@/app/actions/stock";
 import { QRCodeCanvas } from "qrcode.react";
-import { PackagePlus, Save, CopyCheck, Camera, Image as ImageIcon } from "lucide-react";
+import { PackagePlus, Save, CopyCheck, Camera } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 function AddStockForm() {
@@ -20,7 +20,6 @@ function AddStockForm() {
   const [itemTemplates, setItemTemplates] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   
-  // 📸 State สำหรับรูปภาพ
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -37,17 +36,18 @@ function AddStockForm() {
         setItemTemplates(data.itemTemplates);
 
         if (initialItem) {
-          const template = data.itemTemplates.find((t: any) => t._id === initialItem);
-          if (template) {
-            setSelectedTemplate(template._id);
-            setValue("itemName", template._id);
-            setValue("categoryId", template.categoryId);
-            setValue("locationId", template.locationId);
-            setValue("unit", template.unit);
-            setValue("minStockLevel", template.minStockLevel);
-            setValue("shelfLifeDays", template.shelfLifeDays);
-            toast.success(`Ready to restock: ${template._id}`);
-          }
+          // ภายใน handleSelectTemplate และ useEffect
+const template = itemTemplates.find(t => t._id === selectedItemName);
+if (template) {
+  setValue("itemName", template._id);
+  setValue("categoryId", template.categoryId);
+  setValue("locationId", template.locationId);
+  setValue("unit", template.unit);
+  setValue("minStockLevel", template.minStockLevel);
+  setValue("shelfLifeDays", template.shelfLifeDays);
+  setValue("unitCost", template.unitCost || 0); // เติมราคาเดิม
+  setImagePreview(template.imageUrl || null); // โชว์รูปเดิม
+}
         }
       }
     }
@@ -72,11 +72,12 @@ function AddStockForm() {
       setValue("unit", template.unit);
       setValue("minStockLevel", template.minStockLevel);
       setValue("shelfLifeDays", template.shelfLifeDays);
+      setValue("unitCost", template.unitCost || 0); // เติมราคาทุนอัตโนมัติ
+      setImagePreview(template.imageUrl || null); // แสดงรูปภาพเดิมอัตโนมัติ
       toast.success("Auto-filled existing item details!");
     }
   };
 
-  // 📸 ฟังก์ชันบีบอัดรูปและแปลงเป็น Base64
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -85,7 +86,6 @@ function AddStockForm() {
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        // ย่อขนาดรูปให้กว้างไม่เกิน 800px เพื่อลดภาระ Database
         const canvas = document.createElement('canvas');
         const MAX_WIDTH = 800;
         const scaleSize = MAX_WIDTH / img.width;
@@ -93,8 +93,6 @@ function AddStockForm() {
         canvas.height = img.height * scaleSize;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        // แปลงเป็น base64
         setImagePreview(canvas.toDataURL('image/jpeg', 0.7)); 
       };
       img.src = event.target?.result as string;
@@ -109,7 +107,8 @@ function AddStockForm() {
       initialQuantity: Number(data.initialQuantity),
       shelfLifeDays: Number(data.shelfLifeDays),
       minStockLevel: Number(data.minStockLevel),
-      imageUrl: imagePreview // ส่งรูปภาพไปบันทึกด้วย
+      unitCost: Number(data.unitCost) || 0, // แปลงค่าเป็นตัวเลข
+      imageUrl: imagePreview 
     };
 
     const res = await createStockAction(payload);
@@ -129,7 +128,6 @@ function AddStockForm() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="md:col-span-2 space-y-6">
-        
         <div className="bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
           <label className="block text-sm font-semibold text-indigo-900 dark:text-indigo-300 mb-2 flex items-center gap-2">
             <CopyCheck className="w-4 h-4" /> Quick Fill (Select Existing Item)
@@ -146,94 +144,83 @@ function AddStockForm() {
 
         <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            
-            {/* 📸 โซนอัปโหลดรูปภาพ */}
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Item Image / Photo</label>
               <div className="flex items-center gap-4">
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-24 h-24 sm:w-32 sm:h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl flex flex-col items-center justify-center text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer overflow-hidden transition-colors"
-                >
+                <div onClick={() => fileInputRef.current?.click()} className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-500 cursor-pointer overflow-hidden">
                   {imagePreview ? (
                     <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
                     <>
                       <Camera className="w-8 h-8 mb-1 text-gray-400" />
-                      <span className="text-xs font-medium text-center px-2">Tap to take photo</span>
+                      <span className="text-xs font-medium px-2 text-center">Tap to photo</span>
                     </>
                   )}
                 </div>
-                {imagePreview && (
-                  <button type="button" onClick={() => setImagePreview(null)} className="text-sm text-red-500 hover:underline">Remove Photo</button>
-                )}
+                {imagePreview && <button type="button" onClick={() => setImagePreview(null)} className="text-sm text-red-500">Remove</button>}
               </div>
-              {/* input file ซ่อนไว้ ให้รับได้ทั้งกล้อง (capture) และไฟล์ */}
               <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleImageChange} className="hidden" />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Item Name</label>
-              <input {...register("itemName", { required: true })} placeholder="e.g., Paracetamol 500mg" className={inputClass} />
+              <input {...register("itemName", { required: true })} className={inputClass} />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Category</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Category</label>
                 <select {...register("categoryId", { required: true })} className={inputClass}>
-                  <option value="">Select Category...</option>
-                  {categories.map(cat => (
-                    <option key={cat._id} value={cat._id}>{cat.name}</option>
-                  ))}
+                  <option value="">Select...</option>
+                  {categories.map(cat => <option key={cat._id} value={cat._id}>{cat.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Storage Location</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Location</label>
                 <select {...register("locationId", { required: true })} className={inputClass}>
-                  <option value="">Select Location...</option>
-                  {locations.map(loc => (
-                    <option key={loc._id} value={loc._id}>{loc.name}</option>
-                  ))}
+                  <option value="">Select...</option>
+                  {locations.map(loc => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-1">Lot Number (New)</label>
-                <input {...register("lotNumber", { required: true })} placeholder="e.g., LOT-2024-001" className={inputClass} />
+                <label className="block text-sm font-medium mb-1">Lot Number</label>
+                <input {...register("lotNumber", { required: true })} className={inputClass} />
               </div>
               <div>
-                <label className="block text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-1">Quantity Added</label>
-                <input type="number" {...register("initialQuantity", { required: true, min: 1 })} className={inputClass} />
+                <label className="block text-sm font-medium mb-1">Quantity</label>
+                <input type="number" {...register("initialQuantity", { required: true })} className={inputClass} />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Unit</label>
-                <input {...register("unit", { required: true })} placeholder="e.g., box, pcs" className={inputClass} />
+                <label className="block text-sm font-medium mb-1">Unit</label>
+                <input {...register("unit", { required: true })} className={inputClass} />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700">Unit Cost (฿)</label>
-                <input type="number" step="0.01" {...register("unitCost")} className={inputClass} placeholder="0.00" />
+                <label className="block text-sm font-medium mb-1">Unit Cost (฿)</label>
+                <input type="number" step="0.01" {...register("unitCost")} className={inputClass} />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Min Level</label>
+                <label className="block text-sm font-medium mb-1">Min Level</label>
                 <input type="number" {...register("minStockLevel", { required: true })} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Shelf Life (Days)</label>
-                <input type="number" {...register("shelfLifeDays", { required: true })} className={inputClass} />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-1">Manufacture Date</label>
+              <label className="block text-sm font-medium mb-1">Shelf Life (Days)</label>
+              <input type="number" {...register("shelfLifeDays", { required: true })} className={inputClass} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Manufacture Date</label>
               <input type="date" {...register("manufactureDate", { required: true })} className={inputClass} />
             </div>
 
-            <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow-md transition-colors">
+            <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2">
               <Save className="w-5 h-5" />
               {isLoading ? "Saving..." : "Save Stock Item"}
             </button>
@@ -248,10 +235,10 @@ function AddStockForm() {
             <div className="p-4 bg-white border-2 border-dashed border-gray-200 rounded-xl">
               <QRCodeCanvas value={generatedQr} size={150} level={"H"} />
             </div>
-            <p className="text-xs text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{generatedQr}</p>
+            <p className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{generatedQr}</p>
           </div>
         ) : (
-          <p className="text-sm text-gray-400 dark:text-gray-500">Add an item to generate its unique QR Code.</p>
+          <p className="text-sm text-gray-400">Add an item to generate QR Code.</p>
         )}
       </div>
     </div>
@@ -264,7 +251,7 @@ export default function AddStockPage() {
       <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
         <PackagePlus className="w-6 h-6 text-indigo-600" /> Add / Restock Item
       </h1>
-      <Suspense fallback={<div className="p-12 text-center text-gray-500 animate-pulse">Loading setup...</div>}>
+      <Suspense fallback={<div>Loading...</div>}>
         <AddStockForm />
       </Suspense>
     </div>

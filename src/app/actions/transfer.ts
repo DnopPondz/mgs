@@ -25,16 +25,17 @@ export async function transferStockAction(payload: { sourceId: string, targetLoc
     if (targetStock) {
       targetStock.currentQuantity += payload.transferQty;
       await targetStock.save();
-    } else {
-      const newStockData = sourceStock.toObject();
-      delete newStockData._id;
-      newStockData.locationId = payload.targetLocationId;
-      newStockData.initialQuantity = payload.transferQty;
-      newStockData.currentQuantity = payload.transferQty;
-      newStockData.qrCodeValue = `${newStockData.itemName}-${newStockData.lotNumber}-${payload.targetLocationId}`.replace(/\s+/g, '-');
-      
-      await StockItem.create(newStockData);
-    }
+    
+} else {
+  const newStockData = sourceStock.toObject();
+  delete newStockData._id;
+  newStockData.locationId = payload.targetLocationId;
+  newStockData.initialQuantity = payload.transferQty;
+  newStockData.currentQuantity = payload.transferQty;
+  // ค่า unitCost และ imageUrl จะถูก copy ไปด้วยผ่าน toObject()
+  newStockData.qrCodeValue = `${newStockData.itemName}-${newStockData.lotNumber}-${payload.targetLocationId}`.replace(/\s+/g, '-');
+  await StockItem.create(newStockData);
+}
 
     sourceStock.currentQuantity -= payload.transferQty;
     await sourceStock.save();
