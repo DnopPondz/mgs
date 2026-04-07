@@ -5,6 +5,7 @@ import Location from "@/models/Location";
 import { Package, Calendar, MapPin, AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import UseStockForm from "./UseStockForm";
+import PrintLabelButton from "./PrintLabelButton"; // อิมพอร์ตปุ่ม
 
 export const dynamic = "force-dynamic";
 
@@ -32,13 +33,17 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
   const isLowStock = stock.currentQuantity <= stock.minStockLevel;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <Link href="/stock" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Back to Stock List
-      </Link>
+    <div className="max-w-4xl mx-auto space-y-6 print:m-0 print:space-y-0">
+      
+      <div className="print:hidden">
+        <Link href="/stock" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back to Stock List
+        </Link>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:block">
+        {/* ซ่อนกล่อง Detail ตอนปริ้นท์ */}
+        <div className="md:col-span-2 bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm print:hidden">
           <div className="flex justify-between items-start mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -80,11 +85,11 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
           <div className="grid grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-gray-800 mt-6">
             <div>
               <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3"/> Manufacture Date</p>
-              <p className="font-medium text-gray-900 dark:text-gray-200">{new Date(stock.manufactureDate).toLocaleDateString()}</p>
+              <p className="font-medium text-gray-900 dark:text-gray-200">{new Date(stock.manufactureDate).toLocaleDateString('en-GB')}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3"/> Expiry Date</p>
-              <p className="font-medium text-red-600">{new Date(stock.expiryDate).toLocaleDateString()}</p>
+              <p className="font-medium text-red-600">{new Date(stock.expiryDate).toLocaleDateString('en-GB')}</p>
               <p className="text-xs text-gray-400 mt-1">Shelf Life: {stock.shelfLifeDays} Days</p>
             </div>
           </div>
@@ -92,20 +97,48 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
           <UseStockForm stockId={stock._id.toString()} currentQuantity={stock.currentQuantity} unit={stock.unit} />
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col items-center h-fit text-center">
-          <h3 className="font-semibold text-lg mb-4 text-gray-800 dark:text-gray-200">Item QR Code</h3>
-          <div className="bg-white p-4 border-2 border-dashed border-gray-200 rounded-xl mb-4 inline-block">
-            <img 
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${stock.qrCodeValue}`} 
-              alt="QR Code" 
-              className="w-[150px] h-[150px]"
-            />
+        {/* กล่องขวา (ซ่อนตอนพิมพ์เช่นกัน) */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col items-center h-fit text-center space-y-6 print:hidden">
+          {stock.imageUrl && (
+            <div className="w-full">
+              <h3 className="font-semibold text-sm mb-3 text-gray-800 dark:text-gray-200">Item Photo</h3>
+              <div className="w-full aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                <img src={stock.imageUrl} alt={stock.itemName} className="w-full h-full object-cover" />
+              </div>
+            </div>
+          )}
+
+          <div className="w-full">
+            <h3 className="font-semibold text-sm mb-3 text-gray-800 dark:text-gray-200">Item QR Code</h3>
+            <div className="bg-white p-4 border-2 border-dashed border-gray-200 rounded-xl mb-3 inline-block">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${stock.qrCodeValue}`} 
+                alt="QR Code" 
+                className="w-[120px] h-[120px]"
+              />
+            </div>
+            <p className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded text-gray-600 dark:text-gray-300 break-all mb-4">
+              {stock.qrCodeValue}
+            </p>
+
+            {/* ปุ่มกดปริ้นท์ (Client Component) */}
+            <PrintLabelButton />
           </div>
-          <p className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded text-gray-600 dark:text-gray-300">
-            {stock.qrCodeValue}
-          </p>
         </div>
       </div>
+
+      {/* 🖨️ โซนนี้จะมองเห็นเฉพาะตอน "พิมพ์ (Print)" เท่านั้น! */}
+      <div className="hidden print:flex flex-col items-center justify-center h-screen text-black bg-white">
+         <h1 className="text-3xl font-bold mb-2">{stock.itemName}</h1>
+         <p className="text-lg mb-6">LOT: {stock.lotNumber} | EXP: {new Date(stock.expiryDate).toLocaleDateString('en-GB')}</p>
+         <img 
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${stock.qrCodeValue}`} 
+            alt="QR Code" 
+            className="w-[300px] h-[300px]"
+          />
+         <p className="font-mono mt-6 text-sm">{stock.qrCodeValue}</p>
+      </div>
+
     </div>
   );
 }

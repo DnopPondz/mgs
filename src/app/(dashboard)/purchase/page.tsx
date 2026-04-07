@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
-import { ClipboardList, Printer, AlertCircle, ShoppingCart } from "lucide-react";
+import { ClipboardList, AlertCircle, ShoppingCart } from "lucide-react";
+import ActionButtons from "./ActionButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +32,8 @@ export default async function PurchaseListPage() {
   ]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="max-w-5xl mx-auto space-y-6 print:m-0 print:space-y-0 print:max-w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <ClipboardList className="w-6 h-6 text-indigo-600" />
@@ -40,12 +41,12 @@ export default async function PurchaseListPage() {
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Aggregated items that have fallen below their minimum stock level.</p>
         </div>
-        <button className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors shadow-sm">
-          <Printer className="w-4 h-4" /> Print Report
-        </button>
+        
+        {/* เรียกใช้ Client Component เพื่อหลีกเลี่ยง Error */}
+        <ActionButtons data={aggregatedItems} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
         <div className="bg-orange-50 dark:bg-orange-900/20 p-6 rounded-2xl border border-orange-100 dark:border-orange-800/30 flex items-center gap-4">
           <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/50 rounded-xl flex items-center justify-center text-orange-600 dark:text-orange-400">
             <AlertCircle className="w-6 h-6" />
@@ -70,19 +71,22 @@ export default async function PurchaseListPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+      {/* ซ่อนเฉพาะกรอบตารางตอนพิมพ์ ให้แสดงแต่เนื้อหาตาราง */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden print:border-none print:shadow-none">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800/50">
-              <tr>
-                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300">Item Name</th>
-                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300">Category</th>
-                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-center">Total Current Qty</th>
-                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-center">Min Level</th>
-                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-right">Suggested Restock</th>
+          {/* เพิ่มหัวข้อตอนพิมพ์ */}
+          <h2 className="hidden print:block text-xl font-bold mb-4 text-black">Purchase List Report</h2>
+          <table className="w-full text-left text-sm print:text-black print:border-collapse">
+            <thead className="bg-gray-50 dark:bg-gray-800/50 print:bg-transparent">
+              <tr className="print:border-b-2 print:border-black">
+                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 print:text-black">Item Name</th>
+                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 print:text-black">Category</th>
+                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-center print:text-black">Total Current Qty</th>
+                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-center print:text-black">Min Level</th>
+                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-right print:text-black">Suggested Restock</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-800 print:divide-black">
               {aggregatedItems.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-gray-500">All stocks are healthy!</td>
@@ -93,23 +97,22 @@ export default async function PurchaseListPage() {
                   const isOutOfStock = item.totalQuantity === 0;
 
                   return (
-                    <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 print:border-b print:border-gray-300">
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-gray-900 dark:text-white">{item._id}</p>
-                        <p className="text-xs text-indigo-500">Aggregated across all lots</p>
+                        <p className="font-semibold text-gray-900 dark:text-white print:text-black">{item._id}</p>
                       </td>
-                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{item.categoryDetails?.name || "-"}</td>
+                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400 print:text-black">{item.categoryDetails?.name || "-"}</td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold ${
-                          isOutOfStock ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold print:bg-transparent print:text-black ${
+                          isOutOfStock ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
                         }`}>
                           {item.totalQuantity} {item.unit}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center text-gray-500">{item.minStockLevel} {item.unit}</td>
+                      <td className="px-6 py-4 text-center text-gray-500 print:text-black">{item.minStockLevel} {item.unit}</td>
                       <td className="px-6 py-4 text-right">
-                        <span className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">+{suggestedOrder}</span>
-                        <span className="text-sm text-gray-500 ml-1">{item.unit}</span>
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400 text-lg print:text-black">+{suggestedOrder}</span>
+                        <span className="text-sm text-gray-500 ml-1 print:text-black">{item.unit}</span>
                       </td>
                     </tr>
                   );

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { createStockAction, getDropdownData } from "@/app/actions/stock";
 import { QRCodeCanvas } from "qrcode.react";
-import { PackagePlus, Save, CopyCheck } from "lucide-react";
+import { PackagePlus, Save, CopyCheck, Camera, Image as ImageIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 function AddStockForm() {
@@ -20,9 +20,12 @@ function AddStockForm() {
   const [itemTemplates, setItemTemplates] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   
+  // 📸 State สำหรับรูปภาพ
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const { register, handleSubmit, reset, setValue } = useForm();
 
-  // คลาสมาตรฐานสำหรับ Input ไม่ให้แสบตาในโหมดมืด
   const inputClass = "w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-colors";
 
   useEffect(() => {
@@ -57,6 +60,7 @@ function AddStockForm() {
 
     if (!selectedItemName) {
       reset();
+      setImagePreview(null);
       return;
     }
     
@@ -72,6 +76,32 @@ function AddStockForm() {
     }
   };
 
+  // 📸 ฟังก์ชันบีบอัดรูปและแปลงเป็น Base64
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // ย่อขนาดรูปให้กว้างไม่เกิน 800px เพื่อลดภาระ Database
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // แปลงเป็น base64
+        setImagePreview(canvas.toDataURL('image/jpeg', 0.7)); 
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const onSubmit = async (data: any) => {
     setIsLoading(true);
     const payload = {
@@ -79,6 +109,7 @@ function AddStockForm() {
       initialQuantity: Number(data.initialQuantity),
       shelfLifeDays: Number(data.shelfLifeDays),
       minStockLevel: Number(data.minStockLevel),
+      imageUrl: imagePreview // ส่งรูปภาพไปบันทึกด้วย
     };
 
     const res = await createStockAction(payload);
@@ -88,6 +119,7 @@ function AddStockForm() {
       setGeneratedQr(res.qrCodeValue);
       reset();
       setSelectedTemplate(""); 
+      setImagePreview(null);
     } else {
       toast.error(res.message);
     }
@@ -114,6 +146,32 @@ function AddStockForm() {
 
         <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            
+            {/* 📸 โซนอัปโหลดรูปภาพ */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Item Image / Photo</label>
+              <div className="flex items-center gap-4">
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-24 h-24 sm:w-32 sm:h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl flex flex-col items-center justify-center text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer overflow-hidden transition-colors"
+                >
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <Camera className="w-8 h-8 mb-1 text-gray-400" />
+                      <span className="text-xs font-medium text-center px-2">Tap to take photo</span>
+                    </>
+                  )}
+                </div>
+                {imagePreview && (
+                  <button type="button" onClick={() => setImagePreview(null)} className="text-sm text-red-500 hover:underline">Remove Photo</button>
+                )}
+              </div>
+              {/* input file ซ่อนไว้ ให้รับได้ทั้งกล้อง (capture) และไฟล์ */}
+              <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleImageChange} className="hidden" />
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Item Name</label>
               <input {...register("itemName", { required: true })} placeholder="e.g., Paracetamol 500mg" className={inputClass} />
