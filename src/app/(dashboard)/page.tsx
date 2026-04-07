@@ -23,11 +23,12 @@ export default async function DashboardPage() {
       $group: {
         _id: "$itemName",
         totalQty: { $sum: "$currentQuantity" },
-        minLevel: { $max: "$minStockLevel" }
+        minLevel: { $max: "$minStockLevel" },
+        unitCost: { $first: "$unitCost" }
       }
     }
   ]);
-
+const totalValuation = inventoryStatus.reduce((acc, item) => acc + (item.totalQty * (item.unitCost || 0)), 0);
   const outOfStock = inventoryStatus.filter(item => item.totalQty === 0).length;
   const lowStockCount = inventoryStatus.filter(item => item.totalQty > 0 && item.totalQty <= item.minLevel).length;
 
@@ -48,7 +49,7 @@ export default async function DashboardPage() {
   const summaryCards = [
     { title: "Total Stock Lots", value: totalLots, icon: Package, color: "bg-blue-500" },
     { title: "Low Stock Items", value: lowStockCount, icon: Activity, color: "bg-orange-500" },
-    { title: "Out of Stock", value: outOfStock, icon: AlertTriangle, color: "bg-red-500" },
+    { title: "Inventory Value", value: `฿${totalValuation.toLocaleString()}`, icon: Activity, color: "bg-emerald-500" },
     { title: "Expiring Soon", value: expiringSoonCount, icon: Clock, color: "bg-purple-500" },
   ];
 

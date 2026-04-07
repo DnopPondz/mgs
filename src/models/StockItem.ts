@@ -15,9 +15,8 @@ const StockItemSchema = new mongoose.Schema(
     shelfLifeDays: { type: Number, required: true },
     qrCodeValue: { type: String, required: true, unique: true },
     status: { type: String, default: "Healthy" },
-    
-    // 📸 ฟิลด์สำหรับเก็บ URL รูปภาพ
-    imageUrl: { type: String, default: "" }, 
+    imageUrl: { type: String, default: "" },
+    unitCost: { type: Number, default: 0 }, // 💰 เพิ่มฟิลด์ราคาทุนต่อชิ้น
   },
   { timestamps: true }
 );

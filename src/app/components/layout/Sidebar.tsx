@@ -13,7 +13,8 @@ import {
   X,
   ClipboardList,
   Users,
-  ArrowRightLeft
+  ArrowRightLeft,
+  ShieldAlert
 } from "lucide-react";
 
 interface SidebarProps {
@@ -37,6 +38,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Categories", href: "/categories", icon: Tag, show: isAdmin },
     { name: "Locations", href: "/locations", icon: MapPin, show: isAdmin },
     { name: "Users", href: "/users", icon: Users, show: isAdmin },
+    { name: "System & Audit", href: "/system", icon: ShieldAlert, show: isAdmin },
   ].filter(link => link.show); 
 
   return (

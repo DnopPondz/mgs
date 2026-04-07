@@ -215,6 +215,10 @@ function AddStockForm() {
                 <input {...register("unit", { required: true })} placeholder="e.g., box, pcs" className={inputClass} />
               </div>
               <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Unit Cost (฿)</label>
+                <input type="number" step="0.01" {...register("unitCost")} className={inputClass} placeholder="0.00" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Min Level</label>
                 <input type="number" {...register("minStockLevel", { required: true })} className={inputClass} />
               </div>
