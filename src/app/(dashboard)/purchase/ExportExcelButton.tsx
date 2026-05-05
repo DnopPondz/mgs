@@ -8,10 +8,12 @@ export default function ExportExcelButton({ data }: { data: any[] }) {
     // จัดรูปแบบข้อมูลก่อนลง Excel
     const formattedData = data.map(item => ({
       "Item Name": item._id,
+      "Type": item.medicineType || "General",
       "Category": item.categoryDetails?.name || "-",
       "Current Total Qty": item.totalQuantity,
       "Minimum Level": item.minStockLevel,
       "Suggested Restock": (item.minStockLevel * 2) - item.totalQuantity,
+      "Estimated Budget": ((item.minStockLevel * 2) - item.totalQuantity) * (Number(item.unitCost) || 0),
       "Unit": item.unit
     }));
 

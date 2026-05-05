@@ -11,7 +11,7 @@ export default async function UsageHistoryPage() {
   
   // ดึงข้อมูลประวัติการเบิก พร้อมดึงชื่อสินค้าและชื่อผู้เบิกมาด้วย (populate)
   const usages = await StockUsage.find({})
-    .populate({ path: 'stockId', select: 'itemName lotNumber unit', model: StockItem })
+    .populate({ path: 'stockId', select: 'itemName lotNumber unit medicineType', model: StockItem })
     .populate({ path: 'userId', select: 'name email', model: User })
     .sort({ createdAt: -1 })
     .lean();
@@ -21,9 +21,9 @@ export default async function UsageHistoryPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <History className="w-6 h-6 text-indigo-600" />
-          Usage History
+          Medicine Dispense History
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track all stock item usage and withdrawals.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track every medicine dispense transaction.</p>
       </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
@@ -60,7 +60,7 @@ export default async function UsageHistoryPage() {
                           <Package className="w-4 h-4 text-gray-400" />
                           {stock.itemName || "Deleted Item"}
                         </p>
-                        <p className="text-xs text-gray-500 mt-0.5">Lot: {stock.lotNumber || "N/A"}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Lot: {stock.lotNumber || "N/A"} | Type: {stock.medicineType || "-"}</p>
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-medium">{user.name || "Unknown User"}</p>

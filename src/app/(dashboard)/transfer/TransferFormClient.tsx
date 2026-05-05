@@ -32,9 +32,9 @@ export default function TransferFormClient({ stocks, locations }: { stocks: any[
   return (
     <form onSubmit={handleTransfer} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium mb-2 dark:text-gray-200">Select Item to Transfer</label>
+        <label className="block text-sm font-medium mb-2 dark:text-gray-200">Select Medicine to Transfer</label>
         <select value={selectedStockId} onChange={(e) => setSelectedStockId(e.target.value)} className="w-full px-3 py-2 border rounded-lg bg-white text-gray-900 dark:bg-gray-800 dark:text-white dark:border-gray-700 outline-none" required>
-          <option value="">-- Select Item & Lot --</option>
+          <option value="">-- Select Medicine & Lot --</option>
           {stocks.map(stock => (
             <option key={stock._id} value={stock._id}>
               {stock.itemName} (Lot: {stock.lotNumber}) - Current Loc: {stock.locationId?.name || "Unknown"} - Qty: {stock.currentQuantity}

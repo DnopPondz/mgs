@@ -16,21 +16,28 @@ export async function useStockAction(payload: {
     const session = await getServerSession(authOptions);
     if (!session?.user) return { success: false, message: "กรุณาเข้าสู่ระบบก่อนทำรายการ" };
 
+    const quantity = Number(payload.quantityToUse);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return { success: false, message: "จำนวนที่เบิกต้องมากกว่า 0" };
+    }
+
     await dbConnect();
 
     const stock = await StockItem.findById(payload.stockId);
     if (!stock) return { success: false, message: "ไม่พบสินค้าในสต๊อก" };
 
-    if (stock.currentQuantity < payload.quantityToUse) {
+    if (stock.currentQuantity < quantity) {
       return { success: false, message: "จำนวนสินค้าในสต๊อกไม่เพียงพอ!" };
     }
 
-    stock.currentQuantity -= payload.quantityToUse;
+    stock.currentQuantity -= quantity;
 
     if (stock.currentQuantity === 0) {
       stock.status = 'Out of Stock';
     } else if (stock.currentQuantity <= stock.minStockLevel) {
       stock.status = 'Low Stock';
+    } else {
+      stock.status = 'Healthy';
     }
 
     await stock.save();
@@ -38,7 +45,7 @@ export async function useStockAction(payload: {
     await StockUsage.create({
       stockId: stock._id,
       userId: session.user.id, // ใช้ ID จาก Session เพื่อความปลอดภัย
-      quantityUsed: payload.quantityToUse,
+      quantityUsed: quantity,
       reason: payload.reason,
     });
 
@@ -48,10 +55,13 @@ export async function useStockAction(payload: {
 
     return { 
       success: true, 
-      message: `เบิกสินค้า ${payload.quantityToUse} ${stock.unit} สำเร็จ คงเหลือ: ${stock.currentQuantity}` 
+      message: `เบิกสินค้า ${quantity} ${stock.unit} สำเร็จ คงเหลือ: ${stock.currentQuantity}` 
     };
 
-  } catch (error: any) {
-    return { success: false, message: error.message || "เกิดข้อผิดพลาดในการเบิกสินค้า" };
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return { success: false, message: error.message };
+    }
+    return { success: false, message: "เกิดข้อผิดพลาดในการเบิกสินค้า" };
   }
 }

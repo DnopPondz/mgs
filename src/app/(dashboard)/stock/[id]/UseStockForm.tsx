@@ -4,7 +4,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { CheckCircle2 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useStockAction } from "@/app/actions/usage";
+import { useStockAction as executeStockUsage } from "@/app/actions/usage";
 
 interface Props {
   stockId: string;
@@ -24,9 +24,8 @@ export default function UseStockForm({ stockId, currentQuantity, unit }: Props) 
     if (useQuantity > currentQuantity) return toast.error("Cannot use more than current stock!");
 
     setIsProcessing(true);
-    const res = await useStockAction({
+    const res = await executeStockUsage({
       stockId,
-      userId: session.user.id,
       quantityToUse: useQuantity,
       reason: reason || "Manual web usage",
     });
@@ -44,14 +43,14 @@ export default function UseStockForm({ stockId, currentQuantity, unit }: Props) 
   if (currentQuantity <= 0) {
     return (
       <div className="mt-6 bg-red-50 text-red-600 p-4 rounded-xl text-center font-medium border border-red-100 dark:bg-red-900/20 dark:border-red-900/30">
-        This item is currently out of stock.
+        This medicine is currently out of stock.
       </div>
     );
   }
 
   return (
     <form onSubmit={handleUseStock} className="mt-6 bg-indigo-50 dark:bg-indigo-900/10 p-5 rounded-xl border border-indigo-100 dark:border-indigo-900/30 space-y-4">
-      <h3 className="font-semibold text-indigo-900 dark:text-indigo-300">Manual Stock Usage</h3>
+      <h3 className="font-semibold text-indigo-900 dark:text-indigo-300">Manual Medicine Dispense</h3>
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="w-full sm:w-1/3">
           <label className="text-xs text-gray-500 mb-1 block">Quantity ({unit})</label>

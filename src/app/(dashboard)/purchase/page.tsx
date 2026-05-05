@@ -1,6 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
-import Category from "@/models/Category"; // ต้อง import เพื่อให้ Mongoose รู้จัก Model ตอน Lookup
 import { ClipboardList, AlertCircle, ShoppingCart } from "lucide-react";
 import ActionButtons from "./ActionButtons";
 
@@ -16,7 +15,9 @@ export default async function PurchaseListPage() {
         totalQuantity: { $sum: "$currentQuantity" },
         minStockLevel: { $max: "$minStockLevel" },
         unit: { $first: "$unit" },
-        categoryId: { $first: "$categoryId" }
+        categoryId: { $first: "$categoryId" },
+        medicineType: { $first: "$medicineType" },
+        unitCost: { $first: "$unitCost" }
       }
     },
     {
@@ -39,12 +40,12 @@ export default async function PurchaseListPage() {
     <div className="max-w-5xl mx-auto space-y-6 print:m-0 print:space-y-0 print:max-w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <ClipboardList className="w-6 h-6 text-indigo-600" />
-            Purchase & Restock List
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Aggregated items that have fallen below their minimum stock level.</p>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <ClipboardList className="w-6 h-6 text-indigo-600" />
+          Medicine Purchase & Restock List
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Medicines that are below minimum quantity and should be reordered.</p>
+      </div>
         
         {/* ส่งข้อมูลที่ผ่านการ Serialize แล้วไปที่ ActionButtons */}
         <ActionButtons data={aggregatedItems} />
@@ -82,27 +83,31 @@ export default async function PurchaseListPage() {
             <thead className="bg-gray-50 dark:bg-gray-800/50 print:bg-transparent">
               <tr className="print:border-b-2 print:border-black">
                 <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 print:text-black">Item Name</th>
+                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 print:text-black">Type</th>
                 <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 print:text-black">Category</th>
                 <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-center print:text-black">Total Current Qty</th>
                 <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-center print:text-black">Min Level</th>
                 <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-right print:text-black">Suggested Restock</th>
+                <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-right print:text-black">Est. Budget</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-800 print:divide-black">
               {aggregatedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">All stocks are healthy!</td>
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">All medicines are healthy!</td>
                 </tr>
               ) : (
                 aggregatedItems.map((item: any) => {
                   const suggestedOrder = (item.minStockLevel * 2) - item.totalQuantity;
                   const isOutOfStock = item.totalQuantity === 0;
+                  const estimatedBudget = suggestedOrder * (Number(item.unitCost) || 0);
 
                   return (
                     <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 print:border-b print:border-gray-300">
                       <td className="px-6 py-4">
                         <p className="font-semibold text-gray-900 dark:text-white print:text-black">{item._id}</p>
                       </td>
+                      <td className="px-6 py-4 text-gray-600 dark:text-gray-400 print:text-black">{item.medicineType || "General"}</td>
                       <td className="px-6 py-4 text-gray-600 dark:text-gray-400 print:text-black">{item.categoryDetails?.name || "-"}</td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold print:bg-transparent print:text-black ${
@@ -115,6 +120,9 @@ export default async function PurchaseListPage() {
                       <td className="px-6 py-4 text-right">
                         <span className="font-bold text-indigo-600 dark:text-indigo-400 text-lg print:text-black">+{suggestedOrder}</span>
                         <span className="text-sm text-gray-500 ml-1 print:text-black">{item.unit}</span>
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-emerald-600 print:text-black">
+                        ฿{estimatedBudget.toLocaleString()}
                       </td>
                     </tr>
                   );

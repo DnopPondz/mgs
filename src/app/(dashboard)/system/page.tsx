@@ -1,14 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ShieldAlert, Upload, PenTool, Search } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ShieldAlert, Upload, PenTool } from "lucide-react";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { getAuditLogsAction, adjustStockAction, bulkImportAction } from "@/app/actions/system";
+import { useSession } from "next-auth/react";
+
+type AuditLogEntry = {
+  _id?: string;
+  action: string;
+  details: string;
+  user: string;
+  timestamp: string | Date;
+};
 
 export default function SystemAuditPage() {
+  const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState("audit");
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // For Adjust Stock
@@ -16,14 +26,16 @@ export default function SystemAuditPage() {
   const [newQty, setNewQty] = useState("");
   const [reason, setReason] = useState("");
 
-  useEffect(() => {
-    if (activeTab === "audit") fetchLogs();
-  }, [activeTab]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     const data = await getAuditLogsAction();
-    setLogs(data);
-  };
+    setLogs(data as AuditLogEntry[]);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "audit" && session?.user?.role === "Admin") {
+      fetchLogs().catch(() => toast.error("ไม่สามารถโหลด Audit Logs ได้"));
+    }
+  }, [activeTab, session?.user?.role, fetchLogs]);
 
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +56,7 @@ export default function SystemAuditPage() {
       const bstr = evt.target?.result;
       const wb = XLSX.read(bstr, { type: "binary" });
       const wsname = wb.SheetNames[0];
-      const data = XLSX.utils.sheet_to_json(wb.Sheets[wsname]);
+      const data = XLSX.utils.sheet_to_json(wb.Sheets[wsname]) as Record<string, unknown>[];
 
       if (data.length > 0) {
         const res = await bulkImportAction(data);
@@ -56,6 +68,26 @@ export default function SystemAuditPage() {
     };
     reader.readAsBinaryString(file);
   };
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <p className="text-gray-500">Checking access...</p>
+      </div>
+    );
+  }
+
+  if (session?.user?.role !== "Admin") {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
+        <ShieldAlert className="w-20 h-20 text-red-500 mb-4 opacity-80" />
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h1>
+        <p className="text-gray-500 dark:text-gray-400 max-w-md">
+          You do not have permission to use system and audit tools.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -126,7 +158,7 @@ export default function SystemAuditPage() {
         {/* TAB 3: Bulk Import */}
         {activeTab === "import" && (
           <div className="max-w-xl text-center space-y-6">
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Upload an Excel (.xlsx) file with columns: <b>Item Name, Lot Number, Quantity, Unit Cost, Unit, Min Level</b></p>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Upload an Excel (.xlsx) file with columns: <b>Item Name, Generic Name, Strength, Type, Usage, Lot Number, Quantity, Unit Cost, Sale Price, Unit, Min Level</b></p>
             <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl p-12 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               <Upload className="w-10 h-10 text-gray-400 mx-auto mb-4" />
               <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer mx-auto" />

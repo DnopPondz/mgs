@@ -3,34 +3,83 @@ import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
+type SeedRequestBody = {
+  key?: string;
+};
+
+function methodNotAllowed() {
+  return NextResponse.json(
+    { success: false, message: "Method not allowed" },
+    { status: 405, headers: { Allow: "POST" } }
+  );
+}
+
 export async function GET() {
+  return methodNotAllowed();
+}
+
+export async function POST(request: Request) {
+  const seedAdminKey = process.env.SEED_ADMIN_KEY;
+  if (!seedAdminKey) {
+    return NextResponse.json(
+      { success: false, message: "Seed endpoint is disabled" },
+      { status: 403 }
+    );
+  }
+
+  const body = (await request.json().catch(() => ({}))) as SeedRequestBody;
+  const providedKey = request.headers.get("x-seed-key") || body.key || "";
+  if (providedKey !== seedAdminKey) {
+    return NextResponse.json(
+      { success: false, message: "Invalid seed key" },
+      { status: 401 }
+    );
+  }
+
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const adminName = process.env.SEED_ADMIN_NAME || "Super Admin";
+
+  if (!adminEmail || !adminPassword) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Missing required env vars: SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD",
+      },
+      { status: 500 }
+    );
+  }
+
+  if (adminPassword.length < 8) {
+    return NextResponse.json(
+      { success: false, message: "SEED_ADMIN_PASSWORD must be at least 8 characters" },
+      { status: 500 }
+    );
+  }
+
   try {
     await dbConnect();
-    
-    // เช็คว่ามี admin หรือยัง
-    const existingAdmin = await User.findOne({ email: "admin@example.com" });
+
+    const existingAdmin = await User.findOne({ email: adminEmail });
     if (existingAdmin) {
-      return NextResponse.json({ message: "Admin already exists!" });
+      return NextResponse.json({ success: true, message: "Admin already exists" });
     }
 
-    // สร้างรหัสผ่านที่เข้ารหัสแล้ว
-    const hashedPassword = await bcrypt.hash("password123", 10);
-    
-    // สร้างแอดมินคนแรก
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
     await User.create({
-      name: "Super Admin",
-      email: "admin@example.com",
+      name: adminName,
+      email: adminEmail,
       password: hashedPassword,
       role: "Admin",
       isActive: true,
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Admin created successfully! You can now login.",
-      credentials: "Email: admin@example.com | Password: password123"
-    });
-  } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to seed admin" }, { status: 500 });
+    return NextResponse.json({ success: true, message: "Admin created successfully" });
+  } catch {
+    return NextResponse.json(
+      { success: false, message: "Failed to seed admin" },
+      { status: 500 }
+    );
   }
 }

@@ -31,13 +31,17 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
   }
 
   const isLowStock = stock.currentQuantity <= stock.minStockLevel;
+  const costPerUnit = Number(stock.unitCost) || 0;
+  const salePerUnit = Number(stock.salePrice) || 0;
+  const totalCostValue = stock.currentQuantity * costPerUnit;
+  const totalSaleValue = stock.currentQuantity * salePerUnit;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 print:m-0 print:space-y-0">
       
       <div className="print:hidden">
         <Link href="/stock" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-          <ArrowLeft className="w-4 h-4 mr-1" /> Back to Stock List
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back to Medicine List
         </Link>
       </div>
 
@@ -50,6 +54,7 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
                 <Package className="w-6 h-6 text-indigo-600" />
                 {stock.itemName}
               </h1>
+              {stock.genericName && <p className="text-indigo-600 dark:text-indigo-400 text-sm mt-1">Generic: {stock.genericName}</p>}
               <p className="text-gray-500 text-sm mt-1">Lot Number: {stock.lotNumber}</p>
             </div>
             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -61,6 +66,14 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
           </div>
 
           <div className="grid grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Medicine Type</p>
+              <p className="font-medium text-gray-900 dark:text-gray-200">{stock.medicineType || "General"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Strength</p>
+              <p className="font-medium text-gray-900 dark:text-gray-200">{stock.strength || "-"}</p>
+            </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Category</p>
               <p className="font-medium text-gray-900 dark:text-gray-200">{stock.categoryId?.name || "N/A"}</p>
@@ -84,6 +97,30 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
 
           <div className="grid grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-gray-800 mt-6">
             <div>
+              <p className="text-xs text-gray-500 mb-1">Unit Cost</p>
+              <p className="font-medium text-gray-900 dark:text-gray-200">฿{costPerUnit.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Sale Price</p>
+              <p className="font-medium text-gray-900 dark:text-gray-200">฿{salePerUnit.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Stock Cost Value</p>
+              <p className="font-semibold text-emerald-600">฿{totalCostValue.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Stock Retail Value</p>
+              <p className="font-semibold text-indigo-600">฿{totalSaleValue.toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-800 mt-6">
+            <p className="text-xs text-gray-500 mb-1">Usage / Indication</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300">{stock.usageInstructions || "No usage instruction provided."}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-gray-800 mt-6">
+            <div>
               <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3"/> Manufacture Date</p>
               <p className="font-medium text-gray-900 dark:text-gray-200">{new Date(stock.manufactureDate).toLocaleDateString('en-GB')}</p>
             </div>
@@ -101,7 +138,7 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col items-center h-fit text-center space-y-6 print:hidden">
           {stock.imageUrl && (
             <div className="w-full">
-              <h3 className="font-semibold text-sm mb-3 text-gray-800 dark:text-gray-200">Item Photo</h3>
+              <h3 className="font-semibold text-sm mb-3 text-gray-800 dark:text-gray-200">Medicine Photo</h3>
               <div className="w-full aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
                 <img src={stock.imageUrl} alt={stock.itemName} className="w-full h-full object-cover" />
               </div>
@@ -109,7 +146,7 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
           )}
 
           <div className="w-full">
-            <h3 className="font-semibold text-sm mb-3 text-gray-800 dark:text-gray-200">Item QR Code</h3>
+            <h3 className="font-semibold text-sm mb-3 text-gray-800 dark:text-gray-200">Medicine QR Code</h3>
             <div className="bg-white p-4 border-2 border-dashed border-gray-200 rounded-xl mb-3 inline-block">
               <img 
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${stock.qrCodeValue}`} 

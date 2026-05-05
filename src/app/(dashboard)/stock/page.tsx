@@ -1,38 +1,85 @@
 import Link from "next/link";
-import { Plus, Search, Package } from "lucide-react";
+import { Plus, Package } from "lucide-react";
 import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
 import Category from "@/models/Category";
 import StockTableClient from "./StockTableClient";
+
+type StockLot = {
+  _id: string;
+  lotNumber: string;
+  expiryDate: string;
+  currentQuantity: number;
+  unit: string;
+  medicineType?: string;
+  salePrice?: number;
+};
+
+type GroupedStock = {
+  itemName: string;
+  genericName?: string;
+  medicineType?: string;
+  category: string;
+  unit: string;
+  salePrice: number;
+  totalQuantity: number;
+  minStockLevel: number;
+  lots: StockLot[];
+};
+
+type RawStockItem = {
+  _id: string;
+  itemName: string;
+  genericName?: string;
+  medicineType?: string;
+  unit: string;
+  salePrice?: number;
+  minStockLevel: number;
+  currentQuantity: number;
+  lotNumber: string;
+  expiryDate: string;
+  categoryId?: { name?: string };
+};
 
 export const dynamic = "force-dynamic";
 
 export default async function StockListPage() {
   await dbConnect();
   
-  const rawStocks = await StockItem.find({ currentQuantity: { $gt: 0 } })
+  const rawStocks = (await StockItem.find({ currentQuantity: { $gt: 0 } })
     .populate({ path: 'categoryId', select: 'name', model: Category })
     .sort({ expiryDate: 1 })
-    .lean();
+    .lean()) as RawStockItem[];
 
-  const groupedData = rawStocks.reduce((acc: any, item: any) => {
+  const groupedData = rawStocks.reduce<Record<string, GroupedStock>>((acc, item) => {
     const itemName = item.itemName;
     if (!acc[itemName]) {
       acc[itemName] = {
         itemName: itemName,
+        genericName: item.genericName || "",
+        medicineType: item.medicineType || "General",
         category: item.categoryId?.name || "-",
         unit: item.unit,
+        salePrice: Number(item.salePrice) || 0,
         totalQuantity: 0,
         minStockLevel: item.minStockLevel,
         lots: []
       };
     }
     acc[itemName].totalQuantity += item.currentQuantity;
-    acc[itemName].lots.push(JSON.parse(JSON.stringify(item)));
+    acc[itemName].lots.push({
+      _id: item._id.toString(),
+      lotNumber: item.lotNumber,
+      expiryDate: item.expiryDate,
+      currentQuantity: item.currentQuantity,
+      unit: item.unit,
+      medicineType: item.medicineType || "General",
+      salePrice: Number(item.salePrice) || 0,
+    });
     return acc;
   }, {});
 
-  const groupedArray = Object.values(groupedData);
+  const groupedArray: GroupedStock[] = Object.values(groupedData);
 
   return (
     <div className="space-y-6">
@@ -40,18 +87,13 @@ export default async function StockListPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Package className="w-6 h-6 text-indigo-600" />
-            Stock Management
+            Medicine Inventory
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage aggregated stocks and track specific batches.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage medicines, monitor stock totals, and track each lot.</p>
         </div>
         <Link href="/stock/add" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors">
-          <Plus className="w-5 h-5" /> Add New Stock
+          <Plus className="w-5 h-5" /> Add New Medicine
         </Link>
-      </div>
-
-      <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center gap-3">
-        <Search className="w-5 h-5 text-gray-400" />
-        <input type="text" placeholder="Search by item name..." className="bg-transparent border-none outline-none w-full text-gray-700 dark:text-gray-200" />
       </div>
 
       <StockTableClient groupedStocks={groupedArray} />

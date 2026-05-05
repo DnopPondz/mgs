@@ -1,13 +1,18 @@
 import dbConnect from "@/lib/dbConnect";
 import Category from "@/models/Category";
 import { revalidatePath } from "next/cache";
-import { Plus, Tag, Trash2 } from "lucide-react";
+import { Plus, Tag, Trash2, ShieldAlert } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // Server Action สำหรับเพิ่มหมวดหมู่
 async function addCategory(formData: FormData) {
   "use server";
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "Admin") return;
+
   const name = formData.get("name") as string;
   const defaultShelfLifeDays = formData.get("defaultShelfLifeDays") as string;
 
@@ -26,6 +31,9 @@ async function addCategory(formData: FormData) {
 // Server Action สำหรับลบหมวดหมู่
 async function deleteCategory(formData: FormData) {
   "use server";
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "Admin") return;
+
   const id = formData.get("id") as string;
   
   await dbConnect();
@@ -34,6 +42,19 @@ async function deleteCategory(formData: FormData) {
 }
 
 export default async function CategoriesPage() {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "Admin") {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
+        <ShieldAlert className="w-20 h-20 text-red-500 mb-4 opacity-80" />
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h1>
+        <p className="text-gray-500 dark:text-gray-400 max-w-md">
+          You do not have permission to manage categories. Only Administrators can access this page.
+        </p>
+      </div>
+    );
+  }
+
   await dbConnect();
   const categories = await Category.find({}).sort({ createdAt: -1 }).lean();
 
@@ -42,9 +63,9 @@ export default async function CategoriesPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <Tag className="w-6 h-6 text-indigo-600" />
-          Category Management
+          Medicine Category Management
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage item categories and default shelf life.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage medicine categories and default shelf life.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -49,8 +49,8 @@ export default function LoginPage() {
           <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400">
             <Package className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome to StockFlow</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Sign in to manage your inventory</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome to MediFlow</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Sign in to manage your medicine inventory</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

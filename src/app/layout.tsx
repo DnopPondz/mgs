@@ -6,8 +6,8 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "StockFlow - Stock Management System",
-  description: "Modern Inventory and Stock Management System with QR Code",
+  title: "MediFlow - Medicine Management System",
+  description: "Medicine inventory, dispensing, and stock management with QR tracking",
 };
 
 export default function RootLayout({

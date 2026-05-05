@@ -11,20 +11,32 @@ import mongoose from "mongoose";
 import { addDays } from "date-fns";
 import { z } from "zod";
 
+function getStockStatus(currentQuantity: number, minStockLevel: number) {
+  if (currentQuantity <= 0) return "Out of Stock";
+  if (currentQuantity <= minStockLevel) return "Low Stock";
+  return "Healthy";
+}
+
 // สร้าง Schema พื้นฐานสำหรับเช็คข้อมูล payload ป้องกัน Runtime Error
 const stockPayloadSchema = z.object({
   categoryId: z.string(),
   locationId: z.string(),
   itemName: z.string(),
+  genericName: z.string().optional().default(""),
+  strength: z.string().optional().default(""),
+  medicineType: z.string().optional().default("General"),
+  usageInstructions: z.string().optional().default(""),
   lotNumber: z.string(),
   manufactureDate: z.string().or(z.date()),
   shelfLifeDays: z.coerce.number(),
   initialQuantity: z.coerce.number(),
   unitCost: z.coerce.number().optional().default(0),
+  salePrice: z.coerce.number().optional().default(0),
+  minStockLevel: z.coerce.number().optional().default(0),
   imageUrl: z.string().optional().default(""),
 }).passthrough(); // .passthrough() ยอมให้มีฟิลด์อื่นๆ หลุดมาได้ (เช่น unit, minStockLevel)
 
-export async function createStockAction(rawPayload: any) {
+export async function createStockAction(rawPayload: unknown) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return { success: false, message: "Unauthorized!" };
@@ -53,22 +65,27 @@ export async function createStockAction(rawPayload: any) {
     const newStock = await StockItem.create({
       ...payload, // นำข้อมูลทั้งหมดใส่เข้าไป
       currentQuantity: payload.initialQuantity,
+      status: getStockStatus(payload.initialQuantity, payload.minStockLevel),
       expiryDate: expDate,
       qrCodeValue,
       imageUrl: payload.imageUrl,
       unitCost: payload.unitCost,
+      salePrice: payload.salePrice,
     });
 
     await logAudit("ADD_STOCK", `เพิ่มสต๊อก: ${payload.itemName} (Lot: ${payload.lotNumber})`);
 
     return { success: true, message: "Stock added successfully!", qrCodeValue: newStock.qrCodeValue };
-  } catch (error: any) {
+  } catch (error: unknown) {
     // ตรวจสอบกรณี QR Code ซ้ำ (Duplicate Key)
-    if (error.code === 11000) {
+    if (typeof error === "object" && error && "code" in error && (error as { code: number }).code === 11000) {
       return { success: false, message: "QR Code หรือ Lot นี้มีในระบบแล้ว" };
     }
     console.error("Create Stock Error:", error);
-    return { success: false, message: error.message };
+    if (error instanceof Error) {
+      return { success: false, message: error.message };
+    }
+    return { success: false, message: "Failed to create medicine item" };
   }
 }
 
@@ -87,6 +104,11 @@ export async function getDropdownData() {
           minStockLevel: { $first: "$minStockLevel" },
           shelfLifeDays: { $first: "$shelfLifeDays" },
           unitCost: { $first: "$unitCost" }, // ดึงราคาทุนเดิม
+          salePrice: { $first: "$salePrice" }, // ดึงราคาขายเดิม
+          genericName: { $first: "$genericName" },
+          strength: { $first: "$strength" },
+          medicineType: { $first: "$medicineType" },
+          usageInstructions: { $first: "$usageInstructions" },
           imageUrl: { $first: "$imageUrl" }  // ดึงรูปภาพเดิม
         }
       }

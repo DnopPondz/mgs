@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
-import { Package, Activity, Clock } from "lucide-react";
+import { Package, Activity, Clock, DollarSign } from "lucide-react";
 import DashboardChart from "./DashboardChart";
 import CategoryPieChart from "./CategoryPieChart";
 
@@ -33,7 +33,8 @@ export default async function DashboardPage() {
         totalQty: { $sum: "$currentQuantity" },
         minLevel: { $max: "$minStockLevel" },
         // แก้ไข: ดึง unitCost ล่าสุดมาใช้เพื่อให้คำนวณราคาได้ถูกต้อง
-        unitCost: { $first: "$unitCost" } 
+        unitCost: { $first: "$unitCost" },
+        salePrice: { $first: "$salePrice" }
       }
     }
   ]);
@@ -44,9 +45,16 @@ export default async function DashboardPage() {
     const qty = Number(item.totalQty) || 0;
     return acc + (qty * cost);
   }, 0);
+
+  const totalRetailValuation = inventoryStatus.reduce((acc, item) => {
+    const salePrice = Number(item.salePrice) || 0;
+    const qty = Number(item.totalQty) || 0;
+    return acc + (qty * salePrice);
+  }, 0);
   
   // นับรายการสินค้าที่จำนวนเหลือน้อยกว่าหรือเท่ากับจุดสั่งซื้อ (Min Level)
   const lowStockCount = inventoryStatus.filter(item => item.totalQty > 0 && item.totalQty <= item.minLevel).length;
+  const medicineTypesCount = (await StockItem.distinct("medicineType", { currentQuantity: { $gt: 0 } })).length;
 
   // ข้อมูลสำหรับกราฟแท่ง (Top 7 สินค้าที่มีจำนวนเยอะที่สุด)
   const chartData = inventoryStatus
@@ -76,10 +84,12 @@ export default async function DashboardPage() {
 
   // รายการ Card สรุปข้อมูลด้านบน
   const summaryCards = [
-    { title: "Active Stock Lots", value: totalLots.toLocaleString(), icon: Package, color: "bg-blue-500" },
-    { title: "Low Stock Items", value: lowStockCount.toLocaleString(), icon: Activity, color: "bg-orange-500" },
+    { title: "Active Medicine Lots", value: totalLots.toLocaleString(), icon: Package, color: "bg-blue-500" },
+    { title: "Low Stock Medicines", value: lowStockCount.toLocaleString(), icon: Activity, color: "bg-orange-500" },
     // ปรับการแสดงผลราคาให้มีเครื่องหมาย ฿ และลูกเล่นการจัดรูปแบบตัวเลข
-    { title: "Inventory Value", value: `฿${totalValuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: Activity, color: "bg-emerald-500" },
+    { title: "Stock Cost Value", value: `฿${totalValuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: Activity, color: "bg-emerald-500" },
+    { title: "Stock Retail Value", value: `฿${totalRetailValuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: DollarSign, color: "bg-cyan-500" },
+    { title: "Medicine Types", value: medicineTypesCount.toLocaleString(), icon: Package, color: "bg-slate-500" },
     { title: "Expiring Soon", value: expiringSoonCount.toLocaleString(), icon: Clock, color: "bg-purple-500" },
   ];
 
@@ -87,11 +97,11 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">ภาพรวมสต๊อกสินค้าที่มีอยู่ในคลังปัจจุบัน</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">ภาพรวมคลังยา ปริมาณคงเหลือ และมูลค่าปัจจุบัน</p>
       </div>
 
       {/* Summary Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         {summaryCards.map((card, idx) => {
           const Icon = card.icon;
           return (
@@ -112,7 +122,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* กราฟแท่ง Top 7 */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col h-80 lg:col-span-2">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Top Stock Levels (In Stock)</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Top Medicines by Quantity</h3>
           <div className="flex-1 w-full">
             <DashboardChart data={chartData} />
           </div>

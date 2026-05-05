@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server"; // แก้จาก next/route
 import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
-import Category from "@/models/Category"; // ต้อง import เพื่อใช้ populate
-import Location from "@/models/Location"; // ต้อง import เพื่อใช้ populate
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const qrCodeValue = searchParams.get("qr");
 
   if (!qrCodeValue) {
-    return NextResponse.json({ success: false, message: "QR Code is required" }, { status: 400 });
+    return NextResponse.json({ success: false, message: "QR code is required" }, { status: 400 });
   }
 
   try {
@@ -21,11 +26,11 @@ export async function GET(request: Request) {
       .lean();
 
     if (!stock) {
-      return NextResponse.json({ success: false, message: "Stock item not found" }, { status: 404 });
+      return NextResponse.json({ success: false, message: "Medicine not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, data: stock });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ success: false, message: "Server error" }, { status: 500 });
   }
 }

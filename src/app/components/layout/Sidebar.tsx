@@ -30,11 +30,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const links = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard, show: true },
-    { name: "Stock Management", href: "/stock", icon: Package, show: true },
-    { name: "Stock Transfer", href: "/transfer", icon: ArrowRightLeft, show: true },
-    { name: "Scan QR", href: "/scan", icon: QrCode, show: true },
-    { name: "Usage History", href: "/usage", icon: History, show: true },
-    { name: "Purchase List", href: "/purchase", icon: ClipboardList, show: true },
+    { name: "Medicine Inventory", href: "/stock", icon: Package, show: true },
+    { name: "Transfer Medicines", href: "/transfer", icon: ArrowRightLeft, show: true },
+    { name: "Scan & Dispense", href: "/scan", icon: QrCode, show: true },
+    { name: "Dispense History", href: "/usage", icon: History, show: true },
+    { name: "Restock Plan", href: "/purchase", icon: ClipboardList, show: true },
     { name: "Categories", href: "/categories", icon: Tag, show: isAdmin },
     { name: "Locations", href: "/locations", icon: MapPin, show: isAdmin },
     { name: "Users", href: "/users", icon: Users, show: isAdmin },
@@ -57,7 +57,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-800">
           <Link href="/" className="flex items-center gap-2" onClick={onClose}>
             <Package className="w-6 h-6 text-indigo-600" />
-            <span className="text-xl font-bold text-gray-900 dark:text-white">StockFlow</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">MediFlow</span>
           </Link>
           <button onClick={onClose} className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
             <X className="w-5 h-5" />

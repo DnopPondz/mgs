@@ -5,11 +5,23 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import { QrCode, Package, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
-import { useStockAction } from "@/app/actions/usage"; // ดึง Action ที่เราเพิ่งสร้างมาใช้
+import { useStockAction as executeStockUsage } from "@/app/actions/usage";
+
+type ScannedMedicine = {
+  _id: string;
+  itemName: string;
+  lotNumber: string;
+  currentQuantity: number;
+  unit: string;
+  status: string;
+  medicineType?: string;
+  usageInstructions?: string;
+  salePrice?: number;
+};
 
 export default function ScanPage() {
   const { data: session } = useSession();
-  const [stockDetail, setStockDetail] = useState<any>(null);
+  const [stockDetail, setStockDetail] = useState<ScannedMedicine | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [useQuantity, setUseQuantity] = useState<number>(1);
   const [reason, setReason] = useState("");
@@ -37,13 +49,13 @@ export default function ScanPage() {
       const res = await fetch(`/api/stock/scan?qr=${qrValue}`);
       const result = await res.json();
       if (result.success) {
-        setStockDetail(result.data);
-        toast.success("Item found!");
+        setStockDetail(result.data as ScannedMedicine);
+        toast.success("Medicine found!");
       } else {
         toast.error(result.message);
         setTimeout(() => window.location.reload(), 2000); 
       }
-    } catch (error) {
+    } catch {
       toast.error("Error fetching data");
     }
     setIsSearching(false);
@@ -53,15 +65,15 @@ export default function ScanPage() {
   const handleUseStock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.user?.id) return toast.error("User not authenticated");
+    if (!stockDetail) return toast.error("No medicine selected");
     
     if (useQuantity > stockDetail.currentQuantity) {
       return toast.error("Cannot use more than current stock!");
     }
 
     setIsProcessing(true);
-    const res = await useStockAction({
+    const res = await executeStockUsage({
       stockId: stockDetail._id,
-      userId: session.user.id,
       quantityToUse: useQuantity,
       reason: reason || "Regular usage",
     });
@@ -69,7 +81,15 @@ export default function ScanPage() {
     if (res.success) {
       toast.success(res.message);
       // อัปเดตยอดคงเหลือในหน้าจอให้เห็นทันที
-      setStockDetail({ ...stockDetail, currentQuantity: stockDetail.currentQuantity - useQuantity });
+      setStockDetail((prev) => {
+        if (!prev) return prev;
+        const nextQty = prev.currentQuantity - useQuantity;
+        return {
+          ...prev,
+          currentQuantity: nextQty,
+          status: nextQty <= 0 ? "Out of Stock" : prev.status,
+        };
+      });
       setUseQuantity(1);
       setReason("");
     } else {
@@ -82,7 +102,7 @@ export default function ScanPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
         <QrCode className="w-6 h-6 text-indigo-600" />
-        Scan QR Code & Use Stock
+        Scan QR Code & Dispense Medicine
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -103,6 +123,7 @@ export default function ScanPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold">{stockDetail.itemName}</h2>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400">{stockDetail.medicineType || "General"}</p>
                   <p className="text-sm text-gray-500">Lot: {stockDetail.lotNumber}</p>
                 </div>
               </div>
@@ -116,12 +137,20 @@ export default function ScanPage() {
                   <p className="text-xs text-gray-500">Status</p>
                   <p className="text-sm font-semibold mt-1">{stockDetail.status}</p>
                 </div>
+                <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                  <p className="text-xs text-gray-500">Sale Price</p>
+                  <p className="text-sm font-semibold mt-1">฿{(Number(stockDetail.salePrice) || 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                  <p className="text-xs text-gray-500">Usage</p>
+                  <p className="text-sm mt-1">{stockDetail.usageInstructions || "-"}</p>
+                </div>
               </div>
 
               {/* ฟอร์มตัดสต๊อก */}
               {stockDetail.currentQuantity > 0 ? (
                 <form onSubmit={handleUseStock} className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/30 space-y-3">
-                  <h3 className="font-semibold text-indigo-900 dark:text-indigo-300">Use Stock Item</h3>
+                  <h3 className="font-semibold text-indigo-900 dark:text-indigo-300">Dispense Medicine</h3>
                   <div className="flex gap-3">
                     <div className="w-1/3">
                       <label className="text-xs text-gray-500">Quantity</label>
@@ -157,18 +186,18 @@ export default function ScanPage() {
                 </form>
               ) : (
                 <div className="bg-red-50 text-red-600 p-4 rounded-xl text-center font-medium border border-red-100 dark:bg-red-900/20 dark:border-red-900/30">
-                  This item is currently out of stock.
+                  This medicine is currently out of stock.
                 </div>
               )}
               
               <button onClick={() => window.location.reload()} className="w-full text-gray-500 text-sm hover:underline mt-2">
-                Scan Another Item
+                Scan Another Medicine
               </button>
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
               <QrCode className="w-16 h-16 mb-4 opacity-20" />
-              <p>Scan a QR code to view item details and use stock</p>
+              <p>Scan a QR code to view medicine details and dispense stock</p>
             </div>
           )}
         </div>

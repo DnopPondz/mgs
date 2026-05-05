@@ -2,23 +2,62 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, PlusCircle, ArrowRight, CornerDownRight } from "lucide-react";
+import { ChevronDown, ChevronRight, PlusCircle, ArrowRight, CornerDownRight, Search } from "lucide-react";
 
-export default function StockTableClient({ groupedStocks }: { groupedStocks: any[] }) {
+type StockLot = {
+  _id: string;
+  lotNumber: string;
+  expiryDate: string;
+  currentQuantity: number;
+  unit: string;
+  medicineType?: string;
+  salePrice?: number;
+};
+
+type GroupedStock = {
+  itemName: string;
+  genericName?: string;
+  medicineType?: string;
+  category: string;
+  unit: string;
+  salePrice: number;
+  totalQuantity: number;
+  minStockLevel: number;
+  lots: StockLot[];
+};
+
+export default function StockTableClient({ groupedStocks }: { groupedStocks: GroupedStock[] }) {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [searchTerm, setSearchTerm] = useState("");
 
   const toggleRow = (itemName: string) => {
     setExpandedRows(prev => ({ ...prev, [itemName]: !prev[itemName] }));
   };
 
+  const filteredStocks = groupedStocks.filter((group) =>
+    group.itemName.toLowerCase().includes(searchTerm.trim().toLowerCase())
+  );
+
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+    <div className="space-y-4">
+      <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center gap-3">
+        <Search className="w-5 h-5 text-gray-400" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Search by medicine name..."
+          className="bg-transparent border-none outline-none w-full text-gray-700 dark:text-gray-200"
+        />
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800/50">
             <tr>
               <th className="px-6 py-4 w-14 text-center"></th>
-              <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300">Item Name</th>
+              <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300">Medicine</th>
               <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300">Category</th>
               <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-center">Total Qty</th>
               <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-center">Status</th>
@@ -26,10 +65,10 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-            {groupedStocks.length === 0 ? (
-              <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500">No stock items found.</td></tr>
+            {filteredStocks.length === 0 ? (
+              <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500">No medicines found.</td></tr>
             ) : (
-              groupedStocks.map((group: any) => {
+              filteredStocks.map((group) => {
                 const isExpanded = expandedRows[group.itemName];
                 const isLowStock = group.totalQuantity <= group.minStockLevel;
 
@@ -43,12 +82,14 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
                       </td>
                       <td className="px-6 py-4 cursor-pointer" onClick={() => toggleRow(group.itemName)}>
                         <p className="font-bold text-gray-900 dark:text-white text-base">{group.itemName}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{group.lots.length} active lots</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{group.genericName || "Generic name not set"}</p>
+                        <p className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-0.5">{group.medicineType || "General"} | {group.lots.length} active lots</p>
                       </td>
                       <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{group.category}</td>
                       <td className="px-6 py-4 text-center cursor-pointer" onClick={() => toggleRow(group.itemName)}>
                         <span className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">{group.totalQuantity}</span> 
                         <span className="text-xs text-gray-500 ml-1">{group.unit}</span>
+                        <p className="text-[11px] text-gray-500 mt-1">Sale ฿{group.salePrice.toLocaleString()}</p>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isLowStock ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
@@ -62,7 +103,7 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
                       </td>
                     </tr>
 
-                    {isExpanded && group.lots.map((lot: any) => {
+                    {isExpanded && group.lots.map((lot) => {
                       const isExpiringSoon = (new Date(lot.expiryDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24) <= 30;
 
                       return (
@@ -108,6 +149,7 @@ export default function StockTableClient({ groupedStocks }: { groupedStocks: any
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 }

@@ -20,9 +20,9 @@ export default async function TransferPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <ArrowRightLeft className="w-6 h-6 text-indigo-600" />
-          Stock Transfer
+          Medicine Transfer
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Move stock items between different storage locations.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Move medicines between pharmacy locations and cabinets.</p>
       </div>
 
       <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">

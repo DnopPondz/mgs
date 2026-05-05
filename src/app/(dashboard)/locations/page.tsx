@@ -1,13 +1,18 @@
 import dbConnect from "@/lib/dbConnect";
 import Location from "@/models/Location";
 import { revalidatePath } from "next/cache";
-import { MapPin, Plus, Trash2 } from "lucide-react";
+import { MapPin, Plus, Trash2, ShieldAlert } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 // Server Actions สำหรับเพิ่มและลบ
 async function addLocation(formData: FormData) {
   "use server";
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "Admin") return;
+
   const name = formData.get("name") as string;
   const description = formData.get("description") as string;
 
@@ -19,6 +24,9 @@ async function addLocation(formData: FormData) {
 
 async function deleteLocation(formData: FormData) {
   "use server";
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "Admin") return;
+
   const id = formData.get("id") as string;
   await dbConnect();
   await Location.findByIdAndDelete(id);
@@ -26,6 +34,19 @@ async function deleteLocation(formData: FormData) {
 }
 
 export default async function LocationsPage() {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "Admin") {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
+        <ShieldAlert className="w-20 h-20 text-red-500 mb-4 opacity-80" />
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h1>
+        <p className="text-gray-500 dark:text-gray-400 max-w-md">
+          You do not have permission to manage locations. Only Administrators can access this page.
+        </p>
+      </div>
+    );
+  }
+
   await dbConnect();
   const locations = await Location.find({}).sort({ createdAt: -1 }).lean();
 
@@ -34,9 +55,9 @@ export default async function LocationsPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <MapPin className="w-6 h-6 text-indigo-600" />
-          Location Management
+          Storage Location Management
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage warehouse locations and storage areas.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage pharmacy rooms, shelves, and medicine cabinets.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

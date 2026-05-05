@@ -28,6 +28,11 @@ export default async function UserManagementPage() {
   await dbConnect();
   const usersList = await User.find({}).select("-password").sort({ createdAt: -1 }).lean();
 
+  async function createUserFormAction(formData: FormData) {
+    "use server";
+    await createUserAction(formData);
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
@@ -42,7 +47,7 @@ export default async function UserManagementPage() {
         {/* ฟอร์มสร้างผู้ใช้ใหม่ */}
         <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm h-fit">
           <h2 className="text-lg font-semibold mb-4">Add New User</h2>
-          <form action={createUserAction} className="space-y-4">
+          <form action={createUserFormAction} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Full Name</label>
               <input type="text" name="name" required className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 outline-none focus:ring-2 focus:ring-indigo-500" />

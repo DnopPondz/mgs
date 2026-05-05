@@ -3,6 +3,10 @@ import mongoose from "mongoose";
 const StockItemSchema = new mongoose.Schema(
   {
     itemName: { type: String, required: true },
+    genericName: { type: String, default: "" },
+    strength: { type: String, default: "" },
+    medicineType: { type: String, default: "General" },
+    usageInstructions: { type: String, default: "" },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category" },
     locationId: { type: mongoose.Schema.Types.ObjectId, ref: "Location" },
     lotNumber: { type: String, required: true },
@@ -17,6 +21,7 @@ const StockItemSchema = new mongoose.Schema(
     status: { type: String, default: "Healthy" },
     imageUrl: { type: String, default: "" }, // สำหรับเก็บรูปภาพ
     unitCost: { type: Number, default: 0 },  // สำหรับเก็บราคาทุน
+    salePrice: { type: Number, default: 0 }, // ราคาขายต่อหน่วย
   },
   { timestamps: true }
 );
