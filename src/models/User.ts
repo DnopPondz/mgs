@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ["Admin", "Pharmacist", "Staff", "Auditor"], default: "Staff" },
+  role: { type: String, enum: ["AdminOwner", "Admin", "Pharmacist", "Staff", "Auditor"], default: "Staff" },
   permissions: { type: [String], default: [] },
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", default: null },
   pinHash: { type: String, default: "" },

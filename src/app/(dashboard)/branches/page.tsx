@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function BranchesPage() {
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== "Admin") {
+  if (session?.user?.role !== "Admin" && session?.user?.role !== "AdminOwner") {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center text-center">
         <ShieldAlert className="mb-4 h-16 w-16 text-red-500" />

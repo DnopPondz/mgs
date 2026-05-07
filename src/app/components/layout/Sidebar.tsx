@@ -38,7 +38,7 @@ export default function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse
   const pathname = usePathname();
   const { data: session } = useSession();
   
-  const isAdmin = session?.user?.role === "Admin";
+  const isAdmin = session?.user?.role === "Admin" || session?.user?.role === "AdminOwner";
 
   const links = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard, show: true },

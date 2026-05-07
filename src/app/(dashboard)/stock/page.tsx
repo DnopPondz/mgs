@@ -48,7 +48,7 @@ export const dynamic = "force-dynamic";
 export default async function StockListPage() {
   await dbConnect();
   const session = await getServerSession(authOptions);
-  const canManageStock = session?.user?.role === "Admin";
+  const canManageStock = session?.user?.role === "Admin" || session?.user?.role === "AdminOwner";
   
   const rawStocks = (await StockItem.find({ currentQuantity: { $gt: 0 }, deletedAt: null })
     .populate({ path: 'categoryId', select: 'name', model: Category })

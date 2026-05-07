@@ -47,7 +47,7 @@ async function getActiveSession() {
 
 async function requireAdminSession() {
   const session = await getActiveSession();
-  if (session.user.role !== "Admin") throw new Error("Unauthorized");
+  if (session.user.role !== "Admin" && session.user.role !== "AdminOwner") throw new Error("Unauthorized");
   return session;
 }
 

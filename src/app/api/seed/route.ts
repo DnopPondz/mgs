@@ -7,6 +7,8 @@ type SeedRequestBody = {
   key?: string;
 };
 
+const seedRoles = ["AdminOwner", "Admin", "Pharmacist", "Staff", "Auditor"] as const;
+
 function methodNotAllowed() {
   return NextResponse.json(
     { success: false, message: "Method not allowed" },
@@ -39,6 +41,10 @@ export async function POST(request: Request) {
   const adminEmail = process.env.SEED_ADMIN_EMAIL;
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
   const adminName = process.env.SEED_ADMIN_NAME || "Super Admin";
+  const seedAdminRoleRaw = process.env.SEED_ADMIN_ROLE || "AdminOwner";
+  const adminRole = seedRoles.includes(seedAdminRoleRaw as (typeof seedRoles)[number])
+    ? seedAdminRoleRaw
+    : "AdminOwner";
 
   if (!adminEmail || !adminPassword) {
     return NextResponse.json(
@@ -62,7 +68,13 @@ export async function POST(request: Request) {
 
     const existingAdmin = await User.findOne({ email: adminEmail });
     if (existingAdmin) {
-      return NextResponse.json({ success: true, message: "Admin already exists" });
+      if (adminRole === "AdminOwner" && existingAdmin.role !== "AdminOwner") {
+        existingAdmin.role = "AdminOwner";
+        existingAdmin.isActive = true;
+        await existingAdmin.save();
+        return NextResponse.json({ success: true, message: "Existing admin promoted to AdminOwner" });
+      }
+      return NextResponse.json({ success: true, message: `${existingAdmin.role} already exists` });
     }
 
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
@@ -71,11 +83,11 @@ export async function POST(request: Request) {
       name: adminName,
       email: adminEmail,
       password: hashedPassword,
-      role: "Admin",
+      role: adminRole,
       isActive: true,
     });
 
-    return NextResponse.json({ success: true, message: "Admin created successfully" });
+    return NextResponse.json({ success: true, message: `${adminRole} created successfully` });
   } catch {
     return NextResponse.json(
       { success: false, message: "Failed to seed admin" },

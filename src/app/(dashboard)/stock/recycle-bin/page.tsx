@@ -40,7 +40,7 @@ type UsageCountRaw = {
 
 export default async function RecycleBinPage() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "Admin") {
+  if (!session || (session.user.role !== "Admin" && session.user.role !== "AdminOwner")) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
         <ShieldAlert className="w-20 h-20 text-red-500 mb-4 opacity-80" />

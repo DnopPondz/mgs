@@ -7,11 +7,15 @@ import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+function isAdminRole(role?: string | null) {
+  return role === "Admin" || role === "AdminOwner";
+}
+
 // Server Actions สำหรับเพิ่มและลบ
 async function addLocation(formData: FormData) {
   "use server";
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "Admin") return;
+  if (!session || !isAdminRole(session.user.role)) return;
 
   const name = formData.get("name") as string;
   const description = formData.get("description") as string;
@@ -25,7 +29,7 @@ async function addLocation(formData: FormData) {
 async function deleteLocation(formData: FormData) {
   "use server";
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "Admin") return;
+  if (!session || !isAdminRole(session.user.role)) return;
 
   const id = formData.get("id") as string;
   await dbConnect();
@@ -35,7 +39,7 @@ async function deleteLocation(formData: FormData) {
 
 export default async function LocationsPage() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "Admin") {
+  if (!session || !isAdminRole(session.user.role)) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
         <ShieldAlert className="w-20 h-20 text-red-500 mb-4 opacity-80" />

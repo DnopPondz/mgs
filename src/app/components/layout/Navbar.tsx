@@ -4,6 +4,7 @@ import { Menu, Moon, Sun, User as UserIcon } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
+import RoleBadge from "@/app/components/ui/RoleBadge";
 
 export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
   const { data: session } = useSession();
@@ -68,9 +69,9 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
 
         {session?.user ? (
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex flex-col text-right">
+            <div className="hidden md:flex flex-col items-end gap-1 text-right">
               <span className="text-sm font-medium text-gray-900 dark:text-white">{session.user.name}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">{session.user.role || "User"}</span>
+              <RoleBadge role={session.user.role} compact />
             </div>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
               <UserIcon className="w-5 h-5" />

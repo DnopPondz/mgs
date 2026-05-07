@@ -7,11 +7,15 @@ import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+function isAdminRole(role?: string | null) {
+  return role === "Admin" || role === "AdminOwner";
+}
+
 // Server Action สำหรับเพิ่มหมวดหมู่
 async function addCategory(formData: FormData) {
   "use server";
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "Admin") return;
+  if (!session || !isAdminRole(session.user.role)) return;
 
   const name = formData.get("name") as string;
   const defaultShelfLifeDays = formData.get("defaultShelfLifeDays") as string;
@@ -32,7 +36,7 @@ async function addCategory(formData: FormData) {
 async function deleteCategory(formData: FormData) {
   "use server";
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "Admin") return;
+  if (!session || !isAdminRole(session.user.role)) return;
 
   const id = formData.get("id") as string;
   
@@ -43,7 +47,7 @@ async function deleteCategory(formData: FormData) {
 
 export default async function CategoriesPage() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "Admin") {
+  if (!session || !isAdminRole(session.user.role)) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
         <ShieldAlert className="w-20 h-20 text-red-500 mb-4 opacity-80" />

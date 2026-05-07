@@ -2,17 +2,18 @@ import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { Users, UserPlus, ShieldAlert, CheckCircle2, XCircle } from "lucide-react";
-import { createUserAction } from "@/app/actions/user";
+import { Users, UserPlus, ShieldAlert, CheckCircle2, XCircle, Trash2 } from "lucide-react";
+import { createUserAction, deleteUserAction } from "@/app/actions/user";
+import RoleBadge from "@/app/components/ui/RoleBadge";
 
 export const dynamic = "force-dynamic";
 
 export default async function UserManagementPage() {
-  // 1. ดึงข้อมูล Session ปัจจุบัน
   const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === "Admin" || session?.user?.role === "AdminOwner";
+  const isAdminOwner = session?.user?.role === "AdminOwner";
 
-  // 2. ป้องกันไม่ให้ Staff เข้าหน้านี้
-  if (session?.user?.role !== "Admin") {
+  if (!isAdmin) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
         <ShieldAlert className="w-20 h-20 text-red-500 mb-4 opacity-80" />
@@ -24,13 +25,17 @@ export default async function UserManagementPage() {
     );
   }
 
-  // 3. ถ้าเป็น Admin ให้ดึงข้อมูล User ทั้งหมด (ไม่ดึงรหัสผ่านออกมา)
   await dbConnect();
   const usersList = await User.find({}).select("-password").sort({ createdAt: -1 }).lean();
 
   async function createUserFormAction(formData: FormData) {
     "use server";
     await createUserAction(formData);
+  }
+
+  async function deleteUserFormAction(formData: FormData) {
+    "use server";
+    await deleteUserAction(formData);
   }
 
   return (
@@ -67,6 +72,7 @@ export default async function UserManagementPage() {
                 <option value="Pharmacist">Pharmacist (Stock + Dispense)</option>
                 <option value="Auditor">Auditor (Reports + Audit)</option>
                 <option value="Admin">Admin (Full Access)</option>
+                {isAdminOwner && <option value="AdminOwner">Admin Owner (System Owner)</option>}
               </select>
             </div>
             <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg flex justify-center items-center gap-2 transition-colors mt-2">
@@ -85,6 +91,7 @@ export default async function UserManagementPage() {
                   <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300">Role</th>
                   <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300">Status</th>
                   <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300">Joined Date</th>
+                  {isAdminOwner && <th className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 text-right">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
@@ -95,13 +102,7 @@ export default async function UserManagementPage() {
                       <p className="text-xs text-gray-500">{user.email}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        user.role === 'Admin' 
-                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' 
-                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                      }`}>
-                        {user.role}
-                      </span>
+                      <RoleBadge role={user.role} />
                     </td>
                     <td className="px-6 py-4">
                       {user.isActive ? (
@@ -113,6 +114,21 @@ export default async function UserManagementPage() {
                     <td className="px-6 py-4 text-gray-500">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
+                    {isAdminOwner && (
+                      <td className="px-6 py-4 text-right">
+                        <form action={deleteUserFormAction}>
+                          <input type="hidden" name="userId" value={user._id.toString()} />
+                          <button
+                            type="submit"
+                            disabled={user._id.toString() === session?.user?.id}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </button>
+                        </form>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

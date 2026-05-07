@@ -17,6 +17,7 @@ type AuditLogEntry = {
 
 export default function SystemAuditPage() {
   const { data: session, status } = useSession();
+  const isAdmin = session?.user?.role === "Admin" || session?.user?.role === "AdminOwner";
   const [activeTab, setActiveTab] = useState("audit");
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +29,7 @@ export default function SystemAuditPage() {
 
   useEffect(() => {
     let isMounted = true;
-    if (activeTab === "audit" && session?.user?.role === "Admin") {
+    if (activeTab === "audit" && isAdmin) {
       Promise.resolve()
         .then(() => getAuditLogsAction())
         .then((data) => {
@@ -39,7 +40,7 @@ export default function SystemAuditPage() {
     return () => {
       isMounted = false;
     };
-  }, [activeTab, session?.user?.role]);
+  }, [activeTab, isAdmin]);
 
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +82,7 @@ export default function SystemAuditPage() {
     );
   }
 
-  if (session?.user?.role !== "Admin") {
+  if (!isAdmin) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
         <ShieldAlert className="w-20 h-20 text-red-500 mb-4 opacity-80" />

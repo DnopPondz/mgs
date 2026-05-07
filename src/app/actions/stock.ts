@@ -20,6 +20,10 @@ function getStockStatus(currentQuantity: number, minStockLevel: number) {
   return "Healthy";
 }
 
+function isAdminRole(role?: string | null) {
+  return role === "Admin" || role === "AdminOwner";
+}
+
 // สร้าง Schema พื้นฐานสำหรับเช็คข้อมูล payload ป้องกัน Runtime Error
 const stockPayloadSchema = z.object({
   categoryId: z.string(),
@@ -146,7 +150,7 @@ export async function createStockAction(rawPayload: unknown) {
 export async function deleteStockAction(payload: { stockId: string; reason: string; confirmationText: string }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "Admin") {
+    if (!session || !isAdminRole(session.user.role)) {
       return { success: false, message: "Unauthorized" };
     }
 
@@ -199,7 +203,7 @@ export async function deleteStockAction(payload: { stockId: string; reason: stri
 export async function bulkArchiveStockAction(payload: { stockIds: string[]; reason: string; confirmationText: string }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "Admin") {
+    if (!session || !isAdminRole(session.user.role)) {
       return { success: false, message: "Unauthorized" };
     }
 
@@ -256,7 +260,7 @@ export async function bulkArchiveStockAction(payload: { stockIds: string[]; reas
 export async function restoreStockAction(payload: { stockId: string }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "Admin") {
+    if (!session || !isAdminRole(session.user.role)) {
       return { success: false, message: "Unauthorized" };
     }
 
@@ -291,7 +295,7 @@ export async function restoreStockAction(payload: { stockId: string }) {
 export async function permanentlyDeleteStockAction(payload: { stockId: string; confirmationText: string }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "Admin") {
+    if (!session || !isAdminRole(session.user.role)) {
       return { success: false, message: "Unauthorized" };
     }
 

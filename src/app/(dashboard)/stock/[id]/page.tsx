@@ -16,7 +16,7 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
   await dbConnect();
 
   const session = await getServerSession(authOptions);
-  const canDeleteStock = session?.user?.role === "Admin";
+  const canDeleteStock = session?.user?.role === "Admin" || session?.user?.role === "AdminOwner";
   
   const resolvedParams = await params;
   const stockId = resolvedParams.id;

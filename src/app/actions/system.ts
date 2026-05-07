@@ -10,6 +10,10 @@ import { authOptions } from "@/lib/auth";
 
 type BulkImportRow = Record<string, unknown>;
 
+function isAdminRole(role?: string | null) {
+  return role === "Admin" || role === "AdminOwner";
+}
+
 function getStockStatus(currentQuantity: number, minStockLevel: number) {
   if (currentQuantity <= 0) return "Out of Stock";
   if (currentQuantity <= minStockLevel) return "Low Stock";
@@ -18,7 +22,7 @@ function getStockStatus(currentQuantity: number, minStockLevel: number) {
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "Admin") {
+  if (!session || !isAdminRole(session.user.role)) {
     throw new Error("Unauthorized");
   }
   return session;

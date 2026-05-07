@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
+  AdminOwner: ["*"],
   Admin: ["*"],
   Pharmacist: [
     "stock:read",
@@ -17,6 +18,14 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
   Staff: ["stock:read", "dispense:write", "transfer:request", "purchase:request"],
   Auditor: ["stock:read", "reports:read", "audit:read", "recall:read"],
 };
+
+export function isAdminRole(role?: string | null) {
+  return role === "AdminOwner" || role === "Admin";
+}
+
+export function isAdminOwnerRole(role?: string | null) {
+  return role === "AdminOwner";
+}
 
 export type AppSession = Awaited<ReturnType<typeof getServerSession>>;
 
@@ -45,7 +54,15 @@ export function canUsePermission(role: string, explicitPermissions: string[] | u
 
 export async function requireAdmin() {
   const session = await requireSession();
-  if (session.user.role !== "Admin") {
+  if (!isAdminRole(session.user.role)) {
+    throw new Error("Unauthorized");
+  }
+  return session;
+}
+
+export async function requireAdminOwner() {
+  const session = await requireSession();
+  if (!isAdminOwnerRole(session.user.role)) {
     throw new Error("Unauthorized");
   }
   return session;
