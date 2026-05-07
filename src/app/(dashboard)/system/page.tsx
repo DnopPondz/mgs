@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { ShieldAlert, Upload, PenTool } from "lucide-react";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
@@ -26,16 +26,20 @@ export default function SystemAuditPage() {
   const [newQty, setNewQty] = useState("");
   const [reason, setReason] = useState("");
 
-  const fetchLogs = useCallback(async () => {
-    const data = await getAuditLogsAction();
-    setLogs(data as AuditLogEntry[]);
-  }, []);
-
   useEffect(() => {
+    let isMounted = true;
     if (activeTab === "audit" && session?.user?.role === "Admin") {
-      fetchLogs().catch(() => toast.error("ไม่สามารถโหลด Audit Logs ได้"));
+      Promise.resolve()
+        .then(() => getAuditLogsAction())
+        .then((data) => {
+          if (isMounted) setLogs(data as AuditLogEntry[]);
+        })
+        .catch(() => toast.error("ไม่สามารถโหลด Audit Logs ได้"));
     }
-  }, [activeTab, session?.user?.role, fetchLogs]);
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab, session?.user?.role]);
 
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

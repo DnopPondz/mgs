@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"; // แก้จาก next/route
 import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
 export async function GET(request: Request) {
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   try {
     await dbConnect();
     // เพิ่ม populate เพื่อดึงชื่อ Category และ Location มาแสดงผล
-    const stock = await StockItem.findOne({ qrCodeValue })
+    const stock = await StockItem.findOne({ qrCodeValue, deletedAt: null })
       .populate("categoryId", "name")
       .populate("locationId", "name")
       .lean();

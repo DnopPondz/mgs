@@ -3,6 +3,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { transferStockAction } from "@/app/actions/transfer";
+import { createTransferRequestAction } from "@/app/actions/enterprise";
 
 export default function TransferFormClient({ stocks, locations }: { stocks: any[], locations: any[] }) {
   const [selectedStockId, setSelectedStockId] = useState("");
@@ -26,6 +27,14 @@ export default function TransferFormClient({ stocks, locations }: { stocks: any[
     } else {
       toast.error(res.message);
     }
+    setIsLoading(false);
+  };
+
+  const handleTransferRequest = async () => {
+    if (!selectedStockId || !targetLocationId) return toast.error("Please select all fields.");
+    setIsLoading(true);
+    const res = await createTransferRequestAction({ sourceId: selectedStockId, targetLocationId, transferQty: quantity, reason: "Transfer request from transfer page" });
+    res.success ? toast.success(res.message) : toast.error(res.message);
     setIsLoading(false);
   };
 
@@ -59,9 +68,14 @@ export default function TransferFormClient({ stocks, locations }: { stocks: any[
         </div>
       </div>
 
-      <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md disabled:opacity-50 transition-colors">
-        {isLoading ? "Processing..." : "Confirm Transfer"}
-      </button>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button type="button" onClick={handleTransferRequest} disabled={isLoading} className="w-full rounded-lg border border-indigo-200 py-3 font-bold text-indigo-700 transition-colors hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/20">
+          Request Approval
+        </button>
+        <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md disabled:opacity-50 transition-colors">
+          {isLoading ? "Processing..." : "Confirm Transfer"}
+        </button>
+      </div>
     </form>
   );
 }

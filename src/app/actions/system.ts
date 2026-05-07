@@ -51,7 +51,7 @@ export async function adjustStockAction(payload: { stockId: string, newQty: numb
     }
 
     await dbConnect();
-    const stock = await StockItem.findById(payload.stockId);
+    const stock = await StockItem.findOne({ _id: payload.stockId, deletedAt: null });
     if (!stock) return { success: false, message: "Item not found" };
 
     const oldQty = stock.currentQuantity;
@@ -105,6 +105,9 @@ export async function bulkImportAction(items: BulkImportRow[]) {
       locationId: defaultLocation?._id,
       qrCodeValue: `${item["Item Name"]}-${lotNumber}-${Date.now()}`.replace(/\s+/g, '-'),
       status: getStockStatus(quantity, minLevel),
+      deletedAt: null,
+      deletedBy: null,
+      deleteReason: "",
     };
     });
 

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function TransferPage() {
   await dbConnect();
   
-  const stocks = await StockItem.find({ currentQuantity: { $gt: 0 } })
+  const stocks = await StockItem.find({ currentQuantity: { $gt: 0 }, deletedAt: null })
     .populate('locationId')
     .lean();
     

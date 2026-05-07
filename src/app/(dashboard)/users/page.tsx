@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { Users, UserPlus, ShieldAlert, CheckCircle2, XCircle } from "lucide-react";
 import { createUserAction } from "@/app/actions/user";
@@ -58,12 +58,14 @@ export default async function UserManagementPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Password</label>
-              <input type="password" name="password" required minLength={6} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 outline-none focus:ring-2 focus:ring-indigo-500" />
+              <input type="password" name="password" required minLength={8} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Role</label>
               <select name="role" required className="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 outline-none focus:ring-2 focus:ring-indigo-500">
                 <option value="Staff">Staff (Limited Access)</option>
+                <option value="Pharmacist">Pharmacist (Stock + Dispense)</option>
+                <option value="Auditor">Auditor (Reports + Audit)</option>
                 <option value="Admin">Admin (Full Access)</option>
               </select>
             </div>

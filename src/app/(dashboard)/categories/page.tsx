@@ -2,7 +2,7 @@ import dbConnect from "@/lib/dbConnect";
 import Category from "@/models/Category";
 import { revalidatePath } from "next/cache";
 import { Plus, Tag, Trash2, ShieldAlert } from "lucide-react";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";

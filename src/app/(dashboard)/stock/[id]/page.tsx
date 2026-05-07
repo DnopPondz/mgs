@@ -6,16 +6,22 @@ import { Package, Calendar, MapPin, AlertCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link";
 import UseStockForm from "./UseStockForm";
 import PrintLabelButton from "./PrintLabelButton"; // อิมพอร์ตปุ่ม
+import DeleteStockButton from "./DeleteStockButton";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function StockDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await dbConnect();
+
+  const session = await getServerSession(authOptions);
+  const canDeleteStock = session?.user?.role === "Admin";
   
   const resolvedParams = await params;
   const stockId = resolvedParams.id;
   
-  const stock = await StockItem.findById(stockId)
+  const stock = await StockItem.findOne({ _id: stockId, deletedAt: null })
     .populate({ path: 'categoryId', model: Category })
     .populate({ path: 'locationId', model: Location })
     .lean();
@@ -132,6 +138,17 @@ export default async function StockDetailPage({ params }: { params: Promise<{ id
           </div>
 
           <UseStockForm stockId={stock._id.toString()} currentQuantity={stock.currentQuantity} unit={stock.unit} />
+
+          {canDeleteStock && (
+            <div className="pt-5 mt-6 border-t border-gray-100 dark:border-gray-800">
+              <p className="text-xs text-gray-500 mb-3">Danger Zone</p>
+              <DeleteStockButton
+                stockId={stock._id.toString()}
+                itemName={stock.itemName}
+                lotNumber={stock.lotNumber}
+              />
+            </div>
+          )}
         </div>
 
         {/* กล่องขวา (ซ่อนตอนพิมพ์เช่นกัน) */}

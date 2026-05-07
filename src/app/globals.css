@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* เชื่อมระบบ Dark Mode เข้ากับ next-themes */
+/* Dark mode integration with next-themes */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
@@ -9,19 +9,69 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-geist-sans: "IBM Plex Sans", "Segoe UI", "Noto Sans", sans-serif;
+  --font-geist-mono: "IBM Plex Mono", "Consolas", "Courier New", monospace;
+
+  --background: #f4f6f8;
+  --surface: #ffffff;
+  --surface-muted: #eef2f6;
+  --foreground: #121926;
+  --muted: #4f5d75;
+  --border: #d7dee7;
+  --ring: #304a6e;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0f141b;
+  --surface: #171d26;
+  --surface-muted: #1f2631;
+  --foreground: #f2f4f8;
+  --muted: #a5b0c2;
+  --border: #2f3a4a;
+  --ring: #8da7cf;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}
+
+input,
+select,
+textarea {
+  color: var(--foreground);
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: #cad8ea;
+  color: #0f172a;
+}
+
+@layer components {
+  .app-card {
+    @apply rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900;
+  }
 }

@@ -4,7 +4,16 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ["Admin", "Staff"], default: "Staff" },
+  role: { type: String, enum: ["Admin", "Pharmacist", "Staff", "Auditor"], default: "Staff" },
+  permissions: { type: [String], default: [] },
+  branchId: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", default: null },
+  pinHash: { type: String, default: "" },
+  pinUpdatedAt: { type: Date, default: null },
+  failedPinAttempts: { type: Number, default: 0 },
+  pinLockedUntil: { type: Date, default: null },
+  rememberLogin: { type: Boolean, default: true },
+  lastLoginAt: { type: Date, default: null },
+  lastTokenRefreshAt: { type: Date, default: null },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 

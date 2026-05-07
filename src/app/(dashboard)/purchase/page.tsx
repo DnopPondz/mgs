@@ -5,10 +5,23 @@ import ActionButtons from "./ActionButtons";
 
 export const dynamic = "force-dynamic";
 
+type AggregatedItem = {
+  _id: string;
+  totalQuantity: number;
+  minStockLevel: number;
+  unit: string;
+  medicineType?: string;
+  unitCost?: number;
+  categoryDetails?: { name?: string };
+};
+
 export default async function PurchaseListPage() {
   await dbConnect();
 
   const aggregatedItemsRaw = await StockItem.aggregate([
+    {
+      $match: { deletedAt: null }
+    },
     {
       $group: {
         _id: "$itemName",
@@ -34,7 +47,7 @@ export default async function PurchaseListPage() {
   ]);
 
   // แก้ไข Error: แปลงข้อมูลจาก Mongoose Aggregate (ที่มี ObjectId/Buffers) ให้เป็น Plain Object
-  const aggregatedItems = JSON.parse(JSON.stringify(aggregatedItemsRaw));
+  const aggregatedItems = JSON.parse(JSON.stringify(aggregatedItemsRaw)) as AggregatedItem[];
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 print:m-0 print:space-y-0 print:max-w-full">
@@ -69,7 +82,7 @@ export default async function PurchaseListPage() {
           <div>
             <p className="text-sm font-medium text-indigo-800 dark:text-indigo-300">Total Recommended Order</p>
             <h3 className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">
-              {aggregatedItems.reduce((acc: number, item: any) => acc + (item.minStockLevel * 2 - item.totalQuantity), 0)} <span className="text-sm font-normal">units</span>
+              {aggregatedItems.reduce((acc: number, item) => acc + (item.minStockLevel * 2 - item.totalQuantity), 0)} <span className="text-sm font-normal">units</span>
             </h3>
             <p className="text-xs text-indigo-600/70 dark:text-indigo-400/70 mt-1">*Based on restoring to 2x Min Level</p>
           </div>
@@ -97,7 +110,7 @@ export default async function PurchaseListPage() {
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500">All medicines are healthy!</td>
                 </tr>
               ) : (
-                aggregatedItems.map((item: any) => {
+                aggregatedItems.map((item) => {
                   const suggestedOrder = (item.minStockLevel * 2) - item.totalQuantity;
                   const isOutOfStock = item.totalQuantity === 0;
                   const estimatedBudget = suggestedOrder * (Number(item.unitCost) || 0);

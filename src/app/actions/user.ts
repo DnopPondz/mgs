@@ -6,6 +6,14 @@ import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const createUserSchema = z.object({
+  name: z.string().trim().min(2),
+  email: z.string().email().trim().toLowerCase(),
+  password: z.string().min(8).regex(/[A-Za-z]/).regex(/[0-9]/),
+  role: z.enum(["Admin", "Pharmacist", "Staff", "Auditor"]).default("Staff"),
+});
 
 export async function createUserAction(formData: FormData) {
   try {
@@ -15,14 +23,17 @@ export async function createUserAction(formData: FormData) {
       return { success: false, message: "คุณไม่มีสิทธิ์สร้างผู้ใช้งานใหม่ (เฉพาะ Admin เท่านั้น)" };
     }
 
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    const role = formData.get("role") as string;
+    const parsed = createUserSchema.safeParse({
+      name: formData.get("name"),
+      email: formData.get("email"),
+      password: formData.get("password"),
+      role: formData.get("role") || "Staff",
+    });
 
-    if (!name || !email || !password) {
-      return { success: false, message: "กรุณากรอกข้อมูลให้ครบถ้วน" };
+    if (!parsed.success) {
+      return { success: false, message: "ข้อมูลผู้ใช้ไม่ถูกต้อง: รหัสผ่านต้องมีอย่างน้อย 8 ตัว และมีตัวอักษรกับตัวเลข" };
     }
+    const { name, email, password, role } = parsed.data;
 
     await dbConnect();
 
@@ -37,7 +48,7 @@ export async function createUserAction(formData: FormData) {
       name,
       email,
       password: hashedPassword,
-      role: role || "Staff",
+      role,
     });
 
     revalidatePath("/users");

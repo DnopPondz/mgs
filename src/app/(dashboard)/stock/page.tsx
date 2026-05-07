@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { Plus, Package } from "lucide-react";
+import { Plus, Package, Trash2 } from "lucide-react";
 import dbConnect from "@/lib/dbConnect";
 import StockItem from "@/models/StockItem";
 import Category from "@/models/Category";
 import StockTableClient from "./StockTableClient";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 type StockLot = {
   _id: string;
@@ -45,8 +47,10 @@ export const dynamic = "force-dynamic";
 
 export default async function StockListPage() {
   await dbConnect();
+  const session = await getServerSession(authOptions);
+  const canManageStock = session?.user?.role === "Admin";
   
-  const rawStocks = (await StockItem.find({ currentQuantity: { $gt: 0 } })
+  const rawStocks = (await StockItem.find({ currentQuantity: { $gt: 0 }, deletedAt: null })
     .populate({ path: 'categoryId', select: 'name', model: Category })
     .sort({ expiryDate: 1 })
     .lean()) as RawStockItem[];
@@ -86,17 +90,24 @@ export default async function StockListPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Package className="w-6 h-6 text-indigo-600" />
+            <Package className="h-6 w-6 text-gray-700 dark:text-gray-200" />
             Medicine Inventory
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage medicines, monitor stock totals, and track each lot.</p>
         </div>
-        <Link href="/stock/add" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors">
-          <Plus className="w-5 h-5" /> Add New Medicine
-        </Link>
+        <div className="flex items-center gap-2">
+          {canManageStock && (
+            <Link href="/stock/recycle-bin" className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+              <Trash2 className="w-5 h-5" /> Recycle Bin
+            </Link>
+          )}
+          <Link href="/stock/add" className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200">
+            <Plus className="w-5 h-5" /> Add New Medicine
+          </Link>
+        </div>
       </div>
 
-      <StockTableClient groupedStocks={groupedArray} />
+      <StockTableClient groupedStocks={groupedArray} canManageStock={canManageStock} />
     </div>
   );
 }

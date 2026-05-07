@@ -1,19 +1,29 @@
-import NextAuth from "next-auth";
+import "next-auth";
+import "next-auth/jwt";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id: string;
       role: string;
+      permissions?: string[];
+      branchId?: string | null;
+      hasPin?: boolean;
+      rememberLogin?: boolean;
       name?: string | null;
       email?: string | null;
       image?: string | null;
     }
+    pinVerifiedAt?: number;
   }
 
   interface User {
     id: string;
     role: string;
+    permissions?: string[];
+    branchId?: string | null;
+    hasPin?: boolean;
+    rememberLogin?: boolean;
   }
 }
 
@@ -21,5 +31,10 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     role: string;
+    permissions?: string[];
+    branchId?: string | null;
+    hasPin?: boolean;
+    rememberLogin?: boolean;
+    pinVerifiedAt?: number;
   }
 }

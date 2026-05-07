@@ -12,9 +12,10 @@ import { Package } from "lucide-react";
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+  remember: z.boolean().optional().default(true),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type LoginFormValues = z.input<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function LoginPage() {
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
+    defaultValues: { remember: true },
   });
 
   const onSubmit = async (data: LoginFormValues) => {
@@ -30,6 +32,7 @@ export default function LoginPage() {
       redirect: false,
       email: data.email,
       password: data.password,
+      remember: data.remember === false ? "false" : "true",
     });
 
     if (result?.error) {
@@ -43,14 +46,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-      <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-gray-800">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-4">
+      <div className="w-full max-w-md rounded-xl border border-gray-200 bg-[var(--surface)] p-8 dark:border-gray-800">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400">
-            <Package className="w-8 h-8" />
+          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900">
+            <Package className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome to MediFlow</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Sign in to manage your medicine inventory</p>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Welcome to MediFlow</h1>
+          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">Sign in to manage stock, movement, and daily product operations.</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -59,7 +62,7 @@ export default function LoginPage() {
             <input
               {...register("email")}
               type="email"
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full rounded-lg border border-gray-300 bg-[var(--surface)] px-4 py-2.5 text-gray-900 outline-none transition-colors focus:ring-2 focus:ring-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:ring-gray-500"
               placeholder="admin@example.com"
             />
             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
@@ -70,16 +73,26 @@ export default function LoginPage() {
             <input
               {...register("password")}
               type="password"
-              className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full rounded-lg border border-gray-300 bg-[var(--surface)] px-4 py-2.5 text-gray-900 outline-none transition-colors focus:ring-2 focus:ring-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:ring-gray-500"
               placeholder="••••••••"
             />
             {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
           </div>
 
+          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+            <input
+              {...register("remember")}
+              type="checkbox"
+              defaultChecked
+              className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-400"
+            />
+            Remember login on this device
+          </label>
+
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full rounded-lg bg-gray-900 py-2.5 font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
           >
             {isLoading ? "Signing in..." : "Sign in"}
           </button>
