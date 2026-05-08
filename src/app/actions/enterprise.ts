@@ -103,56 +103,62 @@ export async function getAlertsDashboardAction() {
   await dbConnect();
 
   const targetDate = addDays(new Date(), 30);
-  const lowStock = await StockItem.aggregate([
-    { $match: { deletedAt: null } },
-    {
-      $group: {
-        _id: "$itemName",
-        totalQty: { $sum: "$currentQuantity" },
-        minStockLevel: { $max: "$minStockLevel" },
-        unit: { $first: "$unit" },
+
+  const [
+    lowStock,
+    outOfStock,
+    expiringSoon,
+    pendingTransfers,
+    pendingApprovals,
+    lastDeliveries,
+  ] = await Promise.all([
+    StockItem.aggregate([
+      { $match: { deletedAt: null } },
+      {
+        $group: {
+          _id: "$itemName",
+          totalQty: { $sum: "$currentQuantity" },
+          minStockLevel: { $max: "$minStockLevel" },
+          unit: { $first: "$unit" },
+        },
       },
-    },
-    { $match: { $expr: { $and: [{ $gt: ["$totalQty", 0] }, { $lte: ["$totalQty", "$minStockLevel"] }] } } },
-    { $sort: { totalQty: 1 } },
-    { $limit: 50 },
-  ]);
-
-  const outOfStock = await StockItem.aggregate([
-    { $match: { deletedAt: null } },
-    {
-      $group: {
-        _id: "$itemName",
-        totalQty: { $sum: "$currentQuantity" },
-        unit: { $first: "$unit" },
+      { $match: { $expr: { $and: [{ $gt: ["$totalQty", 0] }, { $lte: ["$totalQty", "$minStockLevel"] }] } } },
+      { $sort: { totalQty: 1 } },
+      { $limit: 50 },
+    ]),
+    StockItem.aggregate([
+      { $match: { deletedAt: null } },
+      {
+        $group: {
+          _id: "$itemName",
+          totalQty: { $sum: "$currentQuantity" },
+          unit: { $first: "$unit" },
+        },
       },
-    },
-    { $match: { $expr: { $lte: ["$totalQty", 0] } } },
-    { $sort: { _id: 1 } },
-    { $limit: 50 },
+      { $match: { $expr: { $lte: ["$totalQty", 0] } } },
+      { $sort: { _id: 1 } },
+      { $limit: 50 },
+    ]),
+    StockItem.find({
+      deletedAt: null,
+      currentQuantity: { $gt: 0 },
+      expiryDate: { $lte: targetDate },
+    })
+      .populate("locationId", "name")
+      .populate("branchId", "name code")
+      .select("itemName lotNumber expiryDate currentQuantity unit locationId branchId")
+      .sort({ expiryDate: 1 })
+      .limit(100)
+      .lean(),
+    TransferRequest.find({ status: "Pending" })
+      .populate("sourceLocationId", "name")
+      .populate("targetLocationId", "name")
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean(),
+    ApprovalRequest.countDocuments({ status: "Pending" }),
+    AlertDelivery.find().sort({ createdAt: -1 }).limit(5).lean(),
   ]);
-
-  const expiringSoon = await StockItem.find({
-    deletedAt: null,
-    currentQuantity: { $gt: 0 },
-    expiryDate: { $lte: targetDate },
-  })
-    .populate("locationId", "name")
-    .populate("branchId", "name code")
-    .select("itemName lotNumber expiryDate currentQuantity unit locationId branchId")
-    .sort({ expiryDate: 1 })
-    .limit(100)
-    .lean();
-
-  const pendingTransfers = await TransferRequest.find({ status: "Pending" })
-    .populate("sourceLocationId", "name")
-    .populate("targetLocationId", "name")
-    .sort({ createdAt: -1 })
-    .limit(50)
-    .lean();
-
-  const pendingApprovals = await ApprovalRequest.countDocuments({ status: "Pending" });
-  const lastDeliveries = await AlertDelivery.find().sort({ createdAt: -1 }).limit(5).lean();
 
   return serialize({
     summary: {

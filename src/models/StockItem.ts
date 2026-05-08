@@ -34,6 +34,9 @@ const StockItemSchema = new mongoose.Schema(
 );
 
 StockItemSchema.index({ deletedAt: 1 });
+StockItemSchema.index({ deletedAt: 1, currentQuantity: 1 });
+StockItemSchema.index({ deletedAt: 1, currentQuantity: 1, expiryDate: 1 });
+StockItemSchema.index({ deletedAt: 1, medicineType: 1 });
 StockItemSchema.index({ branchId: 1, locationId: 1 });
 StockItemSchema.index({ itemName: 1, lotNumber: 1, branchId: 1 });
 

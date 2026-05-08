@@ -342,34 +342,35 @@ export async function permanentlyDeleteStockAction(payload: { stockId: string; c
 export async function getDropdownData() {
   try {
     await dbConnect();
-    const categories = await Category.find({}).lean();
-    const locations = await Location.find({}).lean();
-    const itemTemplates = await StockItem.aggregate([
-      { $match: { deletedAt: null } },
-      { $sort: { createdAt: -1 } },
-      { $group: {
-          _id: "$itemName",
-          categoryId: { $first: "$categoryId" },
-          locationId: { $first: "$locationId" },
-          unit: { $first: "$unit" },
-          minStockLevel: { $first: "$minStockLevel" },
-          shelfLifeDays: { $first: "$shelfLifeDays" },
-          unitCost: { $first: "$unitCost" }, // ดึงราคาทุนเดิม
-          salePrice: { $first: "$salePrice" }, // ดึงราคาขายเดิม
-          genericName: { $first: "$genericName" },
-          strength: { $first: "$strength" },
-          medicineType: { $first: "$medicineType" },
-          usageInstructions: { $first: "$usageInstructions" },
-          imageUrl: { $first: "$imageUrl" }  // ดึงรูปภาพเดิม
-        }
-      }
+
+    const [categories, locations, itemTemplates] = await Promise.all([
+      Category.find({}).select("name defaultShelfLifeDays").sort({ createdAt: -1 }).lean(),
+      Location.find({}).select("name branchId").sort({ createdAt: -1 }).lean(),
+      StockItem.aggregate([
+        { $match: { deletedAt: null } },
+        { $sort: { createdAt: -1 } },
+        {
+          $group: {
+            _id: "$itemName",
+            categoryId: { $first: "$categoryId" },
+            locationId: { $first: "$locationId" },
+            unit: { $first: "$unit" },
+            minStockLevel: { $first: "$minStockLevel" },
+            shelfLifeDays: { $first: "$shelfLifeDays" },
+            unitCost: { $first: "$unitCost" },
+            salePrice: { $first: "$salePrice" },
+            genericName: { $first: "$genericName" },
+            strength: { $first: "$strength" },
+            medicineType: { $first: "$medicineType" },
+            usageInstructions: { $first: "$usageInstructions" },
+            imageUrl: { $first: "$imageUrl" },
+          },
+        },
+      ]),
     ]);
-    return { 
-      success: true, 
-      categories: JSON.parse(JSON.stringify(categories)), 
-      locations: JSON.parse(JSON.stringify(locations)), 
-      itemTemplates: JSON.parse(JSON.stringify(itemTemplates)) 
-    };
+
+    const serialized = JSON.parse(JSON.stringify({ categories, locations, itemTemplates }));
+    return { success: true, ...serialized };
   } catch (error) {
     console.error("Failed to fetch dropdown data:", error); // ดักจับ Log เพื่อให้เช็คปัญหาได้ง่ายขึ้น
     return { success: false, categories: [], locations: [], itemTemplates: [] };

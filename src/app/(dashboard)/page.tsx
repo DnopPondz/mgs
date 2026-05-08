@@ -5,9 +5,76 @@ import { Package, Activity, Clock, DollarSign, AlertTriangle, Bell, ArrowRight }
 import DashboardChart from "./DashboardChart";
 import CategoryPieChart from "./CategoryPieChart";
 import TransferRequest from "@/models/TransferRequest";
+import { unstable_cache } from "next/cache";
 
 // ตั้งค่าให้หน้า Dashboard อัปเดตข้อมูลใหม่เสมอ
 export const dynamic = "force-dynamic";
+
+const getCachedDashboardData = unstable_cache(
+  async () => {
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+    const [
+      totalLots,
+      expiringSoonCount,
+      inventoryStatus,
+      medicineTypes,
+      outOfStockRows,
+      pendingTransferCount,
+      categoryData,
+    ] = await Promise.all([
+      StockItem.countDocuments({ currentQuantity: { $gt: 0 }, deletedAt: null }),
+      StockItem.countDocuments({
+        expiryDate: { $lte: thirtyDaysFromNow },
+        currentQuantity: { $gt: 0 },
+        deletedAt: null,
+      }),
+      StockItem.aggregate([
+        {
+          $match: { currentQuantity: { $gt: 0 }, deletedAt: null },
+        },
+        {
+          $group: {
+            _id: "$itemName",
+            totalQty: { $sum: "$currentQuantity" },
+            minLevel: { $max: "$minStockLevel" },
+            unitCost: { $first: "$unitCost" },
+            salePrice: { $first: "$salePrice" },
+          },
+        },
+      ]),
+      StockItem.distinct("medicineType", { currentQuantity: { $gt: 0 }, deletedAt: null }),
+      StockItem.aggregate([
+        { $match: { deletedAt: null } },
+        { $group: { _id: "$itemName", totalQty: { $sum: "$currentQuantity" } } },
+        { $match: { $expr: { $lte: ["$totalQty", 0] } } },
+      ]),
+      TransferRequest.countDocuments({ status: "Pending" }),
+      StockItem.aggregate([
+        {
+          $match: { currentQuantity: { $gt: 0 }, deletedAt: null },
+        },
+        { $group: { _id: "$categoryId", value: { $sum: 1 } } },
+        { $lookup: { from: "categories", localField: "_id", foreignField: "_id", as: "cat" } },
+        { $unwind: { path: "$cat", preserveNullAndEmptyArrays: true } },
+        { $project: { name: { $ifNull: ["$cat.name", "Uncategorized"] }, value: 1, _id: 0 } },
+      ]),
+    ]);
+
+    return {
+      totalLots,
+      expiringSoonCount,
+      inventoryStatus,
+      medicineTypesCount: medicineTypes.length,
+      outOfStockCount: outOfStockRows.length,
+      pendingTransferCount,
+      categoryData,
+    };
+  },
+  ["dashboard-home-data"],
+  { revalidate: 30 }
+);
 
 export default async function DashboardPage() {
   try {
@@ -54,35 +121,15 @@ export default async function DashboardPage() {
     );
   }
 
-  // 1. นับจำนวน Lot ทั้งหมดที่ยังมีสินค้าอยู่ (มากกว่า 0)
-  const totalLots = await StockItem.countDocuments({ currentQuantity: { $gt: 0 }, deletedAt: null });
-
-  // 2. คำนวณสินค้าที่ใกล้หมดอายุ (ภายใน 30 วัน) และต้องยังมีของเหลืออยู่
-  const thirtyDaysFromNow = new Date();
-  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-  const expiringSoonCount = await StockItem.countDocuments({
-    expiryDate: { $lte: thirtyDaysFromNow },
-    currentQuantity: { $gt: 0 },
-    deletedAt: null,
-  });
-
-  // 3. ดึงข้อมูลสถานะสต๊อกรายสินค้า (เฉพาะที่มีของเหลือ > 0)
-  const inventoryStatus = await StockItem.aggregate([
-    {
-      // กรองออกตั้งแต่ระดับ Database: ถ้าของหมดไม่ต้องเอามานับ lot
-      $match: { currentQuantity: { $gt: 0 }, deletedAt: null }
-    },
-    {
-      $group: {
-        _id: "$itemName",
-        totalQty: { $sum: "$currentQuantity" },
-        minLevel: { $max: "$minStockLevel" },
-        // แก้ไข: ดึง unitCost ล่าสุดมาใช้เพื่อให้คำนวณราคาได้ถูกต้อง
-        unitCost: { $first: "$unitCost" },
-        salePrice: { $first: "$salePrice" }
-      }
-    }
-  ]);
+  const {
+    totalLots,
+    expiringSoonCount,
+    inventoryStatus,
+    medicineTypesCount,
+    outOfStockCount,
+    pendingTransferCount,
+    categoryData,
+  } = await getCachedDashboardData();
 
   // คำนวณมูลค่ารวมของสินค้าที่มีอยู่ในคลังจริง (รองรับการแปลงค่าเป็นตัวเลขเพื่อให้แน่ใจว่าคำนวณได้)
   const totalValuation = inventoryStatus.reduce((acc, item) => {
@@ -99,39 +146,12 @@ export default async function DashboardPage() {
   
   // นับรายการสินค้าที่จำนวนเหลือน้อยกว่าหรือเท่ากับจุดสั่งซื้อ (Min Level)
   const lowStockCount = inventoryStatus.filter(item => item.totalQty > 0 && item.totalQty <= item.minLevel).length;
-  const medicineTypesCount = (await StockItem.distinct("medicineType", { currentQuantity: { $gt: 0 }, deletedAt: null })).length;
-  const outOfStockCount = (await StockItem.aggregate([
-    { $match: { deletedAt: null } },
-    { $group: { _id: "$itemName", totalQty: { $sum: "$currentQuantity" } } },
-    { $match: { $expr: { $lte: ["$totalQty", 0] } } },
-  ])).length;
-  const pendingTransferCount = await TransferRequest.countDocuments({ status: "Pending" });
 
   // ข้อมูลสำหรับกราฟแท่ง (Top 7 สินค้าที่มีจำนวนเยอะที่สุด)
   const chartData = inventoryStatus
     .map(item => ({ name: item._id, quantity: item.totalQty }))
     .sort((a, b) => b.quantity - a.quantity)
     .slice(0, 7);
-
-  // 4. ดึงข้อมูลหมวดหมู่ (Category) มาทำกราฟวงกลม (เฉพาะที่มีของเหลือ > 0)
-  const categoryData = await StockItem.aggregate([
-    { 
-      // ถ้าของหมดไม่ต้องนำมานับสัดส่วนในหมวดหมู่
-      $match: { currentQuantity: { $gt: 0 }, deletedAt: null } 
-    },
-    { 
-      $group: { _id: "$categoryId", value: { $sum: 1 } } 
-    },
-    { 
-      $lookup: { from: "categories", localField: "_id", foreignField: "_id", as: "cat" } 
-    },
-    { 
-      $unwind: { path: "$cat", preserveNullAndEmptyArrays: true } 
-    },
-    { 
-      $project: { name: { $ifNull: ["$cat.name", "Uncategorized"] }, value: 1, _id: 0 } 
-    }
-  ]);
 
   // รายการ Card สรุปข้อมูลด้านบน
   const summaryCards = [
